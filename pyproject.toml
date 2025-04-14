@@ -1,0 +1,20 @@
+[project]
+name = "catechol"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Jose Pablo Folch", email = "jose@solvechemistry.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.2.4",
+    "torch>=2.6.0",
+]
+
+[project.scripts]
+catechol = "catechol:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
