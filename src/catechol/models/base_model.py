@@ -22,7 +22,10 @@ class Model(ABC):
     
     def predict(self, test_X: pd.DataFrame) -> pd.DataFrame:
         """Make predictions using the model."""
-        return self._predict(test_X)
+        if not self.is_fitted:
+            raise RuntimeError("Model must be fitted before making predictions.")
+        pred = self._predict(test_X).set_index(test_X.index)
+        return pd.concat([test_X, pred], axis=1)
     
     @abstractmethod
     def _predict(self, test_X: pd.DataFrame) -> pd.DataFrame:
