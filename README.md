@@ -39,6 +39,6 @@ encourage type-hinting, although neither are required!
 For convenience, every model should be implemented as a subclass of `Model`. We 
 demonstrate this in `catechol/models/gp`. Each model must define the following functions:
 
-- `_train(train_data)` - given a dataframe of `data`, fit the underlying model
-- `_predict(test_points)` - given unseen `test_points`, return a prediction per point
+- `_train(train_X, train_y)` - given a dataframe of training data, fit the underlying model
+- `_predict(test_X)` - given unseen `test_X`, return a prediction per point
 - `_ask()` - propose a new experiment (for Bayesian optimization)
