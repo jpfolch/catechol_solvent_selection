@@ -5,6 +5,7 @@ ALL_MODELS = {
     "GPModel": GPModel,
 }
 
+
 def get_model(model_name: str, **kwargs) -> Model:
     """Get a model instance by name."""
     if model_name not in ALL_MODELS:

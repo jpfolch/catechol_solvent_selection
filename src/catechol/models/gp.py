@@ -1,11 +1,13 @@
-from botorch.models import SingleTaskGP
-from botorch import fit_gpytorch_mll
 import pandas as pd
 import torch
+from botorch import fit_gpytorch_mll
+from botorch.models import SingleTaskGP
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
 from catechol.data.data_labels import get_data_labels_mean_var
+
 from .base_model import Model
+
 
 class GPModel(Model):
     def __init__(self, multitask: bool = False):
