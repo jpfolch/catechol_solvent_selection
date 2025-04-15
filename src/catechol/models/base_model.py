@@ -5,13 +5,16 @@ import pandas as pd
 
 class Model(ABC):
     """Base class for all models."""
+    normalize_inputs = True
     def __init__(self):
         """Initialize the model."""
         self.is_fitted = False
 
     def train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
         """Train the model on the given data."""
-        # TODO: normalize the data here
+        if self.normalize_inputs:
+            # TODO: normalize the data here
+            pass
         self._train(train_X, train_Y)
         self.is_fitted = True
 

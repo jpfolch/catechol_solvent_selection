@@ -8,6 +8,11 @@ from catechol.data.data_labels import get_data_labels_mean_var
 from .base_model import Model
 
 class GPModel(Model):
+    def __init__(self, multitask: bool = False):
+        super().__init__()
+        # self.model = None
+        self.multitiask = multitask
+
     def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
         train_X_tensor = torch.tensor(train_X.to_numpy(), dtype=torch.float64)
         train_Y_tensor = torch.tensor(train_Y.to_numpy(), dtype=torch.float64)
