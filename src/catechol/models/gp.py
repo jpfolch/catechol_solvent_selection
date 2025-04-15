@@ -1,7 +1,7 @@
 import pandas as pd
 import torch
 from botorch import fit_gpytorch_mll
-from botorch.models import SingleTaskGP
+from botorch.models import KroneckerMultiTaskGP, SingleTaskGP
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
 from catechol.data.data_labels import get_data_labels_mean_var
@@ -12,15 +12,14 @@ from .base_model import Model
 class GPModel(Model):
     def __init__(self, multitask: bool = False):
         super().__init__()
-        # self.model = None
         self.multitiask = multitask
 
     def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
         train_X_tensor = torch.tensor(train_X.to_numpy(), dtype=torch.float64)
         train_Y_tensor = torch.tensor(train_Y.to_numpy(), dtype=torch.float64)
-        self.model = SingleTaskGP(
-            train_X_tensor, train_Y_tensor, outcome_transform=None
-        )
+
+        model_cls = KroneckerMultiTaskGP if self.multitiask else SingleTaskGP
+        self.model = model_cls(train_X_tensor, train_Y_tensor, outcome_transform=None)
 
         mll = ExactMarginalLogLikelihood(self.model.likelihood, self.model)
         fit_gpytorch_mll(mll)

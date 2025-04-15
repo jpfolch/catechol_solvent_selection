@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 
 import pandas as pd
 
+from catechol.data.normalize import normalize
+
 
 class Model(ABC):
     """Base class for all models."""
@@ -15,8 +17,7 @@ class Model(ABC):
     def train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
         """Train the model on the given data."""
         if self.normalize_inputs:
-            # TODO: normalize the data here
-            pass
+            train_X = normalize(train_X)
         self._train(train_X, train_Y)
         self.is_fitted = True
 
