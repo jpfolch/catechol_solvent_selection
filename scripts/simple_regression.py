@@ -1,15 +1,16 @@
 # TODO: replace this with actual data
 
-import pandas as pd
+from catechol.data.data_labels import INPUT_LABELS_SINGLE_SOLVENT
+from catechol.data.loader import load_single_solvent_data
 from catechol.models import GPModel
 
-model = GPModel()
-train_X = pd.DataFrame({"x1": [0.1, 0.2, 0.3], "x2": [0.4, 0.5, 0.6]})
-train_Y = pd.DataFrame(
-    {"Product 1 yield": [0.1, 0.2, 0.3], "Product 2 yield": [0.4, 0.5, 0.6]}
-)
+model = GPModel(featurization="acs_pca_descriptors")
+train_X, train_Y = load_single_solvent_data()
+# remove unnecessary columns
+train_X = train_X[INPUT_LABELS_SINGLE_SOLVENT]
+
 model.train(train_X, train_Y)
 
-test_X = pd.DataFrame({"x1": [0.15, 0.25], "x2": [0.51, 0.7]})
-predictions = model.predict(test_X)
-print(predictions)
+# test_X = pd.DataFrame({"x1": [0.15, 0.25], "x2": [0.51, 0.7]})
+# predictions = model.predict(test_X)
+# print(predictions)

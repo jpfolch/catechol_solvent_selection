@@ -5,17 +5,27 @@ from botorch.models import KroneckerMultiTaskGP, SingleTaskGP
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
 from catechol.data.data_labels import get_data_labels_mean_var
+from catechol.data.featurizations import FeaturizationType, get_featurization
 
 from .base_model import Model
 
 
 class GPModel(Model):
-    def __init__(self, multitask: bool = False, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self, multitask: bool = False, featurization: FeaturizationType | None = None
+    ):
+        super().__init__(featurization=featurization)
         self.multitiask = multitask
 
     def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
-        train_X_tensor = torch.tensor(train_X.to_numpy(), dtype=torch.float64)
+        feat = get_featurization(train_X["SOLVENT NAME"], self.featurization)
+        train_X_featurized = pd.concat(
+            [train_X.drop(columns="SOLVENT NAME"), feat.drop(columns="SOLVENT NAME")],
+            axis="columns",
+        )
+        train_X_tensor = torch.tensor(
+            train_X_featurized.to_numpy(), dtype=torch.float64
+        )
         train_Y_tensor = torch.tensor(train_Y.to_numpy(), dtype=torch.float64)
 
         model_cls = KroneckerMultiTaskGP if self.multitiask else SingleTaskGP

@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 
 import pandas as pd
 
-from catechol.data.normalize import normalize
 from catechol.data.featurizations import FeaturizationType
+from catechol.data.normalize import normalize
 
 
 class Model(ABC):
@@ -32,6 +32,9 @@ class Model(ABC):
         """Make predictions using the model."""
         if not self.is_fitted:
             raise RuntimeError("Model must be fitted before making predictions.")
+        if self.normalize_inputs:
+            train_X = normalize(train_X)
+
         pred = self._predict(test_X).set_index(test_X.index)
         return pd.concat([test_X, pred], axis=1)
 

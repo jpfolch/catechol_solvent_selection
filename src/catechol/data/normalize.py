@@ -1,6 +1,7 @@
 import pandas as pd
 
 BOUNDS = {
+    "Residence Time": [0.0, 15.0],
     "Temperature": [175.0, 225.0],
 }
 
