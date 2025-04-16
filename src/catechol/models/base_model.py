@@ -33,7 +33,7 @@ class Model(ABC):
         if not self.is_fitted:
             raise RuntimeError("Model must be fitted before making predictions.")
         if self.normalize_inputs:
-            train_X = normalize(train_X)
+            test_X = normalize(test_X)
 
         pred = self._predict(test_X).set_index(test_X.index)
         return pd.concat([test_X, pred], axis=1)

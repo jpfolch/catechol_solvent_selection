@@ -7,6 +7,7 @@ BOUNDS = {
 
 
 def normalize(X: pd.DataFrame) -> pd.DataFrame:
+    """Map values of X to the interval [0, 1] where bounds are known."""
     X_norm = X.copy()
     for column in X_norm.columns:
         if column in BOUNDS:

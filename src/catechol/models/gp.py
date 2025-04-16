@@ -5,7 +5,7 @@ from botorch.models import KroneckerMultiTaskGP, SingleTaskGP
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
 from catechol.data.data_labels import get_data_labels_mean_var
-from catechol.data.featurizations import FeaturizationType, get_featurization
+from catechol.data.featurizations import FeaturizationType, featurize_input_df
 
 from .base_model import Model
 
@@ -18,11 +18,7 @@ class GPModel(Model):
         self.multitiask = multitask
 
     def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
-        feat = get_featurization(train_X["SOLVENT NAME"], self.featurization)
-        train_X_featurized = pd.concat(
-            [train_X.drop(columns="SOLVENT NAME"), feat.drop(columns="SOLVENT NAME")],
-            axis="columns",
-        )
+        train_X_featurized = featurize_input_df(train_X, self.featurization)
         train_X_tensor = torch.tensor(
             train_X_featurized.to_numpy(), dtype=torch.float64
         )
@@ -35,7 +31,8 @@ class GPModel(Model):
         fit_gpytorch_mll(mll)
 
     def _predict(self, test_X: pd.DataFrame) -> pd.DataFrame:
-        test_X_tensor = torch.from_numpy(test_X.to_numpy()).to(torch.float64)
+        test_X_featurized = featurize_input_df(test_X, self.featurization)
+        test_X_tensor = torch.from_numpy(test_X_featurized.to_numpy()).to(torch.float64)
         with torch.no_grad():
             preds = self.model.posterior(test_X_tensor)
             mean = preds.mean.cpu().numpy()
