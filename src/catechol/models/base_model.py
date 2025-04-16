@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import pandas as pd
 
 from catechol.data.normalize import normalize
+from catechol.data.featurizations import FeaturizationType
 
 
 class Model(ABC):
@@ -10,9 +11,10 @@ class Model(ABC):
 
     normalize_inputs = True
 
-    def __init__(self):
+    def __init__(self, featurization: FeaturizationType | None = None):
         """Initialize the model."""
         self.is_fitted = False
+        self.featurization = featurization
 
     def train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
         """Train the model on the given data."""

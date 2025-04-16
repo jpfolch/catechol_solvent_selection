@@ -10,8 +10,8 @@ from .base_model import Model
 
 
 class GPModel(Model):
-    def __init__(self, multitask: bool = False):
-        super().__init__()
+    def __init__(self, multitask: bool = False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.multitiask = multitask
 
     def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:

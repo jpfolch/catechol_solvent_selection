@@ -5,8 +5,9 @@ from pathlib import Path
 
 FEAT_DIRECTORY = Path("data/featurization_look_ups")
 FEATURIZATIONS = ["acs_pca_descriptors", "drfps", "fragprints"]
+FeaturizationType = Literal["acs_pca_descriptors", "drfps", "fragprints"]
 
-def get_featurization(solvents: pd.Series, featurization: Literal["acs_pca_descriptors", "drfps", "fragprints"]) -> pd.DataFrame:
+def get_featurization(solvents: pd.Series, featurization: FeaturizationType) -> pd.DataFrame:
     """Return the featurizations for a sequence of solvents.
     
     The output DataFrame has the same index as `solvents`, and a column containing

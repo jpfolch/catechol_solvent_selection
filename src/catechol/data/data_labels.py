@@ -5,8 +5,13 @@ def get_data_labels_mean_var() -> tuple[list[str], list[str]]:
 
     return mean_labels, var_labels
 
+INPUT_LABELS_SINGLE_SOLVENT = [
+    "Residence Time",
+    "Temperature",
+    "SOLVENT_NAME"
+]
 
 TARGET_LABELS = [
-    "Product 1 yield",
-    "Product 2 yield",
+    "Product 1",
+    "Product 2",
 ]
