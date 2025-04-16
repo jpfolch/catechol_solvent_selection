@@ -2,7 +2,7 @@ import pandas as pd
 from gauche.dataloader import MolPropLoader
 
 # load the data
-path = 'data.nosync/full_data/all_data_clean_yields.csv'
+path = 'data/full_data/catechol_full_data_yields.csv'
 df = pd.read_csv(path)
 
 def graph_represenation(solvent: str = 'A'):
