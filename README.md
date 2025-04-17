@@ -42,3 +42,49 @@ demonstrate this in `catechol/models/gp`. Each model must define the following f
 - `_train(train_X, train_y)` - given a dataframe of training data, fit the underlying model
 - `_predict(test_X)` - given unseen `test_X`, return a prediction per point
 - `_ask()` - propose a new experiment (for Bayesian optimization)
+
+## Dataset
+
+Here, we provide a brief overview of the dataset in this repo.
+
+The dataset is divided into two:
+- `catechol_single_solvent_yields` contains only the single-solvent data
+- `catechol_full_data_yields` contains the full data set with mixture solvents
+
+We also provide some pre-computed featurizations, which can be looked up with the 
+`SOLVENT NAME` column.
+
+### Single solvent columns
+Below is a table of all the columns in the `catechol_single_solvent_yields` csv:
+
+| Name | Type | Description |
+|--------|--------|--------|
+| `EXP NUM` | int| Experiment index; all rows with the same `EXP NUM` will use the same solvent|
+| `Residence Time` | float | Time (in minutes) of the reaction|
+| `Temperature`| float | Temperature (in Celsius) of the reaction|
+| `SM` | float | ??? |
+| `Product 2` | float | Quantity of product 3 measured| 
+| `Product 3` | float | Quantity of product 3 measured| 
+| `SOLVENT_NAME` | str | Chemical name of the solvent; used as a key when looking up featurizations | 
+| `SOLVENT_RATIO` | list[float] | Ratio of component solvents [1]|
+| `{...} SMILES` | str | SMILES string representation of a molecule|
+
+[1] This is different than the ratios in the solvent ramp experiments. Here, a single solvent has two component molecules, eg. the solvent "Acetonitrile.Acetic Acid" has two compounds. The `SOLVENT_RATIO` gives the ratio between these compounds. Most solvents consist of only a single compound, so the ratio will be `[1.0]`.
+
+**Inputs**: `Residence Time`, `Temperature`, `SOLVENT NAME`
+
+**Outputs**: `Product 2`, `Product 3` 
+
+### Full data columns
+
+The full data contains some additional columns, since these experiments ramp between
+two solvents:
+
+| Name | Type | Description |
+|--------|--------|--------|
+| `SolventB%` | float | Percent concentration of solvent B; the rest of the solvent is made up of solvent A|
+| `SOLVENT {A/B} NAME` | str | Chemical name of the solvents; used as a key when looking up featurizations|
+
+**Inputs**: `Residence Time`, `Temperature`, `SOLVENT A NAME`, `SOLVENT B NAME`, `SolventB%`
+
+**Outputs**: `Product 2`, `Product 3` 
