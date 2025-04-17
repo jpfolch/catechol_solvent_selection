@@ -62,10 +62,10 @@ Below is a table of all the columns in the `catechol_single_solvent_yields` csv:
 | `EXP NUM` | int| Experiment index; all rows with the same `EXP NUM` will use the same solvent|
 | `Residence Time` | float | Time (in minutes) of the reaction|
 | `Temperature`| float | Temperature (in Celsius) of the reaction|
-| `SM` | float | ??? |
-| `Product 2` | float | Quantity of product 3 measured| 
-| `Product 3` | float | Quantity of product 3 measured| 
-| `SOLVENT_NAME` | str | Chemical name of the solvent; used as a key when looking up featurizations | 
+| `SM` | float | Quantity of starting material measured (yield %)|
+| `Product 2` | float | Quantity of product 2 measured (yield %)| 
+| `Product 3` | float | Quantity of product 3 measured (yield %)| 
+| `SOLVENT_NAME` | str | Chemical name of the solvent; used as a key when looking up featurizations| 
 | `SOLVENT_RATIO` | list[float] | Ratio of component solvents [1]|
 | `{...} SMILES` | str | SMILES string representation of a molecule|
 
@@ -73,7 +73,7 @@ Below is a table of all the columns in the `catechol_single_solvent_yields` csv:
 
 **Inputs**: `Residence Time`, `Temperature`, `SOLVENT NAME`
 
-**Outputs**: `Product 2`, `Product 3` 
+**Outputs**: `SM`, `Product 2`, `Product 3` 
 
 ### Full data columns
 
@@ -87,4 +87,4 @@ two solvents:
 
 **Inputs**: `Residence Time`, `Temperature`, `SOLVENT A NAME`, `SOLVENT B NAME`, `SolventB%`
 
-**Outputs**: `Product 2`, `Product 3` 
+**Outputs**: `SM`, `Product 2`, `Product 3` 
