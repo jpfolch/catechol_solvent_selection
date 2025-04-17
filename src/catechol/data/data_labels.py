@@ -23,4 +23,5 @@ INPUT_LABELS_FULL_DATA = [
 TARGET_LABELS = [
     "Product 2",
     "Product 3",
+    "SM",
 ]

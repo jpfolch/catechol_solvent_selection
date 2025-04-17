@@ -1,4 +1,5 @@
 from pathlib import Path
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -23,8 +24,12 @@ def train_test_split(
     """Split a dataframe into a train/test pair.
 
     This is a naive way of splitting data. For evaluation with cross validation,
-    and for methods where entire trajectories are observed (ODE), we should think
-    about splitting based on experiment number."""
+    and for methods where entire trajectories are observed (ODE), we should 
+    split based on experiment number."""
+
+    warnings.warn("Since this data is a time series, this train/test split "
+                  "leads to easy interpolation, and is not a good reflection of "
+                  "model performance. Please use a different split method.")
 
     num_train = int(len(df) * train_percentage)
     rng = np.random.default_rng(seed)
