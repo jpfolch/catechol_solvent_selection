@@ -2,21 +2,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from catechol.models import Model
 from catechol.data.data_labels import INPUT_LABELS_SINGLE_SOLVENT, TARGET_LABELS
 from catechol.plots import style
 
+def _plot_model_mean_and_confidence(model: Model, solvent_name: str, temperature: float, ax: plt.Axes):
+    test_X = pd.DataFrame(np.linspace(0.0, 15.0, 100), columns=["Residence Time"])
+    test_X["Temperature"] = temperature
+    test_X["SOLVENT NAME"] = solvent_name
+    predictions = model.predict(test_X)
 
-def plot_solvent_prediction(predictions: pd.DataFrame, ground_truth: pd.DataFrame):
-    assert set(INPUT_LABELS_SINGLE_SOLVENT).issubset(predictions.columns)
-    fig, ax = plt.subplots()
-    # sort by residence time
-    sorted_idcs = np.argsort(predictions["Residence Time"])
-    predictions = predictions.iloc[sorted_idcs]
-    ground_truth = ground_truth.iloc[sorted_idcs]
-    # filter by temperature
-    high_temp_idcs = np.nonzero(predictions["Temperature"] == 225)
-    predictions = predictions.iloc[high_temp_idcs]
-    ground_truth = ground_truth.iloc[high_temp_idcs]
     for target in TARGET_LABELS:
         color = style.TARGET_TO_COLOR[target]
         ax.plot(
@@ -35,16 +30,25 @@ def plot_solvent_prediction(predictions: pd.DataFrame, ground_truth: pd.DataFram
             alpha=0.2,
         )
 
+def _plot_ground_truth(test_X: pd.DataFrame, test_Y: pd.DataFrame, ax: plt.Axes):
+    for target in TARGET_LABELS:
+        color = style.TARGET_TO_COLOR[target]
         ax.scatter(
-            predictions["Residence Time"],
-            ground_truth[target],
+            test_X["Residence Time"],
+            test_Y[target],
             color=color,
             edgecolors="black",
             label="Ground Truth",
         )
 
+def plot_solvent_prediction(model: Model, test_X: pd.DataFrame, test_Y: pd.DataFrame) -> plt.Axes:
+    fig, ax = plt.subplots()
+    solvent = test_X["SOLVENT NAME"].unique()[0]
+    _plot_model_mean_and_confidence(model, solvent, 225, ax)
+    _plot_ground_truth(test_X, test_Y, ax)
     ax.legend()
     ax.set_xlabel("Residence Time (min)")
     ax.set_ylabel("Yield (%)")
     ax.set_ylim(-0.05, 1.0)
+    ax.set_title(f"Solvent: {solvent}")
     return ax
