@@ -58,7 +58,7 @@ def generate_leave_one_out_splits(
 
     all_solvents = X["SOLVENT NAME"].unique()
     for solvent_name in sorted(all_solvents):
-        train_idcs_mask = X["SOLVENT NAME"] == solvent_name
+        train_idcs_mask = X["SOLVENT NAME"] != solvent_name
         yield (
             (X[train_idcs_mask], Y[train_idcs_mask]),
             (X[~train_idcs_mask], Y[~train_idcs_mask]),
