@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from catechol import metrics
 from catechol.data.data_labels import INPUT_LABELS_SINGLE_SOLVENT
 from catechol.data.loader import (
     generate_leave_one_out_splits,
@@ -33,5 +34,11 @@ model.train(train_X, train_Y)
 predictions = model.predict(test_X)
 print(predictions)
 
+# calculate some metrics
+mse = metrics.mse(predictions, test_Y)
+nlpd = metrics.nlpd(predictions, test_Y)
+print(f"{mse=}, {nlpd=}")
+
+# plot the predictions
 plot_solvent_prediction(predictions, test_Y)
 plt.show()
