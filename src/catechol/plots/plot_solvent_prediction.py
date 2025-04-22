@@ -46,4 +46,5 @@ def plot_solvent_prediction(predictions: pd.DataFrame, ground_truth: pd.DataFram
     ax.legend()
     ax.set_xlabel("Residence Time (min)")
     ax.set_ylabel("Yield (%)")
+    ax.set_ylim(-0.05, 1.0)
     return ax

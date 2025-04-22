@@ -2,6 +2,7 @@ import pandas as pd
 import torch
 from botorch import fit_gpytorch_mll
 from botorch.models import KroneckerMultiTaskGP, SingleTaskGP
+from gpytorch.means import ZeroMean
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
 from catechol.data.data_labels import get_data_labels_mean_var
@@ -25,7 +26,7 @@ class GPModel(Model):
         train_Y_tensor = torch.tensor(train_Y.to_numpy(), dtype=torch.float64)
 
         model_cls = KroneckerMultiTaskGP if self.multitiask else SingleTaskGP
-        self.model = model_cls(train_X_tensor, train_Y_tensor, outcome_transform=None)
+        self.model = model_cls(train_X_tensor, train_Y_tensor, mean_module=ZeroMean())
 
         mll = ExactMarginalLogLikelihood(self.model.likelihood, self.model)
         fit_gpytorch_mll(mll)

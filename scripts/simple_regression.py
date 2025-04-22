@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from catechol.data.data_labels import INPUT_LABELS_SINGLE_SOLVENT
 from catechol.data.loader import (
     generate_leave_one_out_splits,
@@ -5,6 +6,7 @@ from catechol.data.loader import (
     train_test_split,
 )
 from catechol.models import GPModel
+from catechol.plots.plot_solvent_prediction import plot_solvent_prediction
 
 model = GPModel(featurization="acs_pca_descriptors")
 X, Y = load_single_solvent_data()
@@ -22,7 +24,14 @@ predictions = model.predict(test_X)
 print(predictions)
 
 # you can also use leave-one-out splits of the data
-(train_X, train_Y), (test_X, test_Y) = next(generate_leave_one_out_splits(X, Y))
+split_generator = generate_leave_one_out_splits(X, Y)
+# this will generate a new split each time you call `next` on the generator
+# you can, instead, use a for loop to iterate over split_generator
+(train_X, train_Y), (test_X, test_Y) = next(split_generator)
 model.train(train_X, train_Y)
+
 predictions = model.predict(test_X)
 print(predictions)
+
+plot_solvent_prediction(predictions, test_Y)
+plt.show()
