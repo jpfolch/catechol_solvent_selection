@@ -9,10 +9,15 @@ from catechol.data.loader import (
 from catechol.models import GPModel
 from catechol.plots.plot_solvent_prediction import plot_solvent_prediction
 
-model = GPModel(featurization="acs_pca_descriptors")
+model = GPModel(featurization="fragprints")
 X, Y = load_single_solvent_data()
 # remove unnecessary columns
 X = X[INPUT_LABELS_SINGLE_SOLVENT]
+
+# # remove all low-temperature solvents
+# high_temperature_mask = X["Temperature"] == 225
+# X = X[high_temperature_mask]
+# Y = Y[high_temperature_mask]
 
 # you can split the data into train/test sets
 # however, this is naive as it ignores the time-series nature of the data
@@ -40,5 +45,10 @@ nlpd = metrics.nlpd(predictions, test_Y)
 print(f"{mse=}, {nlpd=}")
 
 # plot the predictions
-plot_solvent_prediction(predictions, test_Y)
+plot_solvent_prediction(model, test_X, test_Y)
+(train_X, train_Y), (test_X, test_Y) = next(split_generator)
+plot_solvent_prediction(model, test_X, test_Y)
+(train_X, train_Y), (test_X, test_Y) = next(split_generator)
+plot_solvent_prediction(model, test_X, test_Y)
+
 plt.show()
