@@ -4,8 +4,8 @@ from typing import Literal
 import pandas as pd
 
 FEAT_DIRECTORY = Path("data/featurization_look_ups")
-FEATURIZATIONS = ["acs_pca_descriptors", "drfps", "fragprints"]
-FeaturizationType = Literal["acs_pca_descriptors", "drfps", "fragprints"]
+FEATURIZATIONS = ["acs_pca_descriptors", "drfps", "fragprints", "spange_descriptors", "smiles"]
+FeaturizationType = Literal["acs_pca_descriptors", "drfps", "fragprints", "spange_descriptors", "smiles"]
 
 
 def _get_featurization_from_series(
