@@ -32,10 +32,9 @@ class Model(ABC):
         """Make predictions using the model."""
         if not self.is_fitted:
             raise RuntimeError("Model must be fitted before making predictions.")
-        if self.normalize_inputs:
-            test_X = normalize(test_X)
+        test_X_norm = normalize(test_X) if self.normalize_inputs else test_X
 
-        pred = self._predict(test_X).set_index(test_X.index)
+        pred = self._predict(test_X_norm).set_index(test_X_norm.index)
         return pd.concat([test_X, pred], axis=1)
 
     @abstractmethod
