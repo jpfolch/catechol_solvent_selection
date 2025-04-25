@@ -16,11 +16,11 @@ class Model(ABC):
         self.is_fitted = False
         self.featurization = featurization
 
-    def train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
+    def train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame, *args, **kwargs) -> None:
         """Train the model on the given data."""
         if self.normalize_inputs:
             train_X = normalize(train_X)
-        self._train(train_X, train_Y)
+        self._train(train_X, train_Y, *args, **kwargs)
         self.is_fitted = True
 
     @abstractmethod
