@@ -45,6 +45,7 @@ class LantentODE(Model):
                use_pretrained_model: bool = False, 
                train_dir: str = None, 
                kl_weight: float = 1.0,
+               mc_sample_num: int = 1,
                **kwargs) -> None:
         
         # initialize 
@@ -94,23 +95,30 @@ class LantentODE(Model):
                     solvent_emb_temperature = torch.cat([torch.Tensor(solvent_emb), torch.Tensor([temp])], dim=-1).unsqueeze(0).to(self.device)
                     # infer and sample latent initial state
                     qz0_mean, qz0_std = self.l_in_rec.forward(solvent_emb_temperature)
-                    epsilon_z0 = torch.randn(qz0_mean.size()).to(self.device)
-                    z0 = epsilon_z0 * qz0_std + qz0_mean
-                    # infer and sample latent dynamics
+                    # epsilon_z0 = torch.randn(qz0_mean.size()).to(self.device)
+                    # z0 = epsilon_z0 * qz0_std + qz0_mean
+                    # # infer and sample latent dynamics
                     qzd_mean, qzd_std = self.l_d_rec.forward(solvent_emb_temperature)
-                    epsilon_zd = torch.randn(qzd_mean.size()).to(self.device)
-                    zd = epsilon_zd * qzd_std + qzd_mean
+                    # epsilon_zd = torch.randn(qzd_mean.size()).to(self.device)
+                    # zd = epsilon_zd * qzd_std + qzd_mean
+
+                    # Sample MC samples in a batch
+                    epsilon_z0 = torch.randn(mc_sample_num, *qz0_mean.size()).to(self.device)  
+                    z0 = (epsilon_z0 * qz0_std + qz0_mean).permute(1, 0, 2)  # [batch_dim, mc_sample_num, latent_dim]
+
+                    epsilon_zd = torch.randn(mc_sample_num, *qzd_mean.size()).to(self.device)
+                    zd = (epsilon_zd * qzd_std + qzd_mean).permute(1, 0, 2) # [batch_dim, mc_sample_num, latent_dim]
 
                     # forward in time and solve ode for reconstructions
                     pred_z = odeint(self.func, 
                                     torch.concat([z0, zd], axis=-1), \
-                                    torch.Tensor(measurement_time).to(self.device)).permute(1, 0, 2)[:, :, :self.latent_state_dim]
+                                    torch.Tensor(measurement_time).to(self.device)).permute(1, 2, 0, 3)[..., :self.latent_state_dim]
 
                     pred_mean, pred_std = self.dec(measurement_time, pred_z, z0, zd)
-                    pred_mean = pred_mean.permute(1, 0, 2)[inverse_indices].permute(1, 0, 2)
-                    pred_std = pred_std.permute(1, 0, 2)[inverse_indices].permute(1, 0, 2)
+                    pred_mean = pred_mean.permute(2, 0, 1, 3)[inverse_indices].permute(1, 2, 0, 3)
+                    pred_std = pred_std.permute(2, 0, 1, 3)[inverse_indices].permute(1, 2, 0, 3)
                     # compute ELBO loss
-                    logpx = torch.distributions.normal.Normal(loc = pred_mean[0], scale = pred_std[0]).log_prob(torch.Tensor(traj_o.to_numpy()).to(self.device)).sum(-1).sum(-1)
+                    logpx = torch.distributions.normal.Normal(loc = pred_mean[0], scale = pred_std[0]).log_prob(torch.Tensor(traj_o.to_numpy()).to(self.device)).sum(-1).sum(-1).mean()
 
                     pz0_mean = torch.zeros_like(qz0_mean).to(self.device)
                     pzd_mean  = torch.zeros_like(qzd_mean).to(self.device)
@@ -143,7 +151,7 @@ class LantentODE(Model):
                     }, ckpt_path)
                     print('Stored ckpt at {}'.format(ckpt_path))
 
-    def _predict(self, test_X: pd.DataFrame) -> pd.DataFrame:
+    def _predict(self, test_X: pd.DataFrame, mc_sample_num: int = 1) -> pd.DataFrame:
         original_solvent_name = test_X["SOLVENT NAME"].copy()
         test_X = featurize_input_df(test_X, featurization="acs_pca_descriptors")
         test_X['SOLVENT EMBEDDING'] = test_X[['PC1', 'PC2', 'PC3', 'PC4', 'PC5']].values.tolist()
@@ -162,25 +170,28 @@ class LantentODE(Model):
                 solvent_emb = test_X.loc[test_X['SOLVENT NAME'] == solvent_key, 'SOLVENT EMBEDDING'].iloc[0]
                 # note: only single traj here
                 solvent_emb_temperature = torch.cat([torch.Tensor(solvent_emb), torch.Tensor([temp])], dim=-1).unsqueeze(0).to(self.device)
-                # infer and sample latent initial state
+
                 qz0_mean, qz0_std = self.l_in_rec.forward(solvent_emb_temperature)
-                epsilon_z0 = torch.randn(qz0_mean.size()).to(self.device)
-                z0 = epsilon_z0 * qz0_std + qz0_mean
-                # infer and sample latent dynamics
+                # # infer and sample latent dynamics
                 qzd_mean, qzd_std = self.l_d_rec.forward(solvent_emb_temperature)
-                epsilon_zd = torch.randn(qzd_mean.size()).to(self.device)
-                zd = epsilon_zd * qzd_std + qzd_mean
+
+                # Sample MC samples in a batch
+                epsilon_z0 = torch.randn(mc_sample_num, *qz0_mean.size()).to(self.device)  
+                z0 = (epsilon_z0 * qz0_std + qz0_mean).permute(1, 0, 2)  # [batch_dim, mc_sample_num, latent_dim]
+
+                epsilon_zd = torch.randn(mc_sample_num, *qzd_mean.size()).to(self.device)
+                zd = (epsilon_zd * qzd_std + qzd_mean).permute(1, 0, 2) # [batch_dim, mc_sample_num, latent_dim]
 
                 # forward in time and solve ode for reconstructions
                 pred_z = odeint(self.func, 
                                 torch.concat([z0, zd], axis=-1), \
-                                torch.Tensor(measurement_time).to(self.device)).permute(1, 0, 2)[:, :, :self.latent_state_dim]
+                                torch.Tensor(measurement_time).to(self.device)).permute(1, 2, 0, 3)[..., :self.latent_state_dim]
 
                 pred_mean, pred_std = self.dec(measurement_time, pred_z, z0, zd)
-                pred_mean = pred_mean.permute(1, 0, 2)[inverse_indices].permute(1, 0, 2)
-                pred_std = pred_std.permute(1, 0, 2)[inverse_indices].permute(1, 0, 2)
-                pred_means.append(pred_mean[0])
-                pred_vars.append((pred_std ** 2)[0])
+                pred_mean = pred_mean.permute(2, 0, 1, 3)[inverse_indices].permute(1, 2, 0, 3)
+                pred_std = pred_std.permute(2, 0, 1, 3)[inverse_indices].permute(1, 2, 0, 3)
+                pred_means.append(pred_mean[0].mean(0)) # average cross mc dim
+                pred_vars.append((pred_std ** 2)[0].mean(0)) # average cross mc dim
 
         mean, var = _formulate_time_series_as_data(keys, traj_inputs, pred_means, pred_vars)
         mean_lbl, var_lbl = get_data_labels_mean_var()
@@ -207,9 +218,9 @@ class _LatentODEfunc(nn.Module):
 
     def forward(self, t, x):
         self.nfe += 1
-        zd  = x[:, self.latent_dnamics_dim:]
+        zd  = x[..., self.latent_dnamics_dim:]
         # augment t as input
-        expand_t = t.unsqueeze(0).unsqueeze(-1)
+        expand_t = torch.ones(zd.shape[:-1]).unsqueeze(-1).to(x.device) * t
         out = self.fc1(torch.concatenate([expand_t, x], axis=-1))
         out = self.elu(out)
         out = self.fc2(out)
@@ -236,7 +247,7 @@ class _LatentInitRecognition(nn.Module):
         out = self.silu(out)
         out = self.fc3(out)
         mu = self.mu(out)
-        sigma = self._std_lower_bound + 0.9 *nn.functional.sigmoid(self.sigma_layer(out))
+        sigma = self._std_lower_bound + 0.9 *nn.functional.softplus(self.sigma_layer(out))
         return mu, sigma
 
 
@@ -258,12 +269,12 @@ class _DynamicsRecognition(nn.Module):
         out = self.silu(out)
         out = self.fc3(out)
         mu = self.mu(out)
-        sigma = self._std_lower_bound + 0.9 *nn.functional.sigmoid(self.sigma_layer(out))
+        sigma = self._std_lower_bound + 0.9 *nn.functional.softplus(self.sigma_layer(out))
         return mu, sigma
 
 
 class _HeteroscedasticDecoder(nn.Module):
-    def __init__(self, latent_dim, nhidden, obs_dim, std_lower_bound = 1e-1):
+    def __init__(self, latent_dim, nhidden, obs_dim, std_lower_bound = 1e-2):
         super(_HeteroscedasticDecoder, self).__init__()
         self.hidden_to_mu = nn.Sequential(nn.Linear(latent_dim, nhidden), nn.SiLU(), nn.Linear(nhidden, obs_dim))
         self.hidden_to_sigma = nn.Sequential(nn.Linear(latent_dim, nhidden), nn.SiLU(), nn.Linear(nhidden, obs_dim))
@@ -272,23 +283,22 @@ class _HeteroscedasticDecoder(nn.Module):
     def __call__(self, target_t, z_t, z_0, z_d):
         """
         target_t: [timesteps]
-        z_t: [sample_size, timesteps, D_dim]
-        z_0: [sample_size, D_dim]
-        z_d: [sample_size, D_dim]
+        z_t: [batch_size, mc_sample_size, timesteps, D_dim]
+        z_0: [batch_size,  mc_sample_size, D_dim]
+        z_d: [batch_size, mc_sample_size,  D_dim]
 
         return [sample_size, time_steps, x_dim]
         """
         # concatenation target_t, z_d, z_t, z_0
-        expand_target_t = target_t.unsqueeze(0).unsqueeze(-1)
-        expand_z_d = z_d.unsqueeze(1).expand(-1, z_t.size(1), -1)
-        expand_z_0 = z_0.unsqueeze(1).expand(-1, z_t.size(1), -1)
+        expand_target_t = (torch.ones(z_t.shape[:-1]).to(target_t.device) * target_t).unsqueeze(-1)
+        expand_z_d = z_d.unsqueeze(-2).expand(-1, -1, z_t.size(-2), -1)
+        expand_z_0 = z_0.unsqueeze(-2).expand(-1, -1, z_t.size(-2), -1)
         hidden = self.tlz_to_hidden(\
             torch.concatenate([expand_target_t, expand_z_d, z_t, expand_z_0], axis=-1))
 
         mu = self.hidden_to_mu(hidden)
         sigma = self.hidden_to_sigma(hidden)
         sigma = self._std_lower_bound + 0.9 * nn.functional.softplus(sigma)
-        # var = torch.exp(log_var) + self._var_lower_bound
         return mu, sigma
 
 
@@ -408,3 +418,6 @@ def _normal_kl(mu1, var1, mu2, var2):
     """
     kl = 0.5 * ( (var1 / var2) + ((mu2 - mu1)**2) / var2 - 1 + torch.log(var2 / var1) )
     return kl.sum(-1)
+
+
+
