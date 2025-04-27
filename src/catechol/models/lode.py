@@ -97,7 +97,7 @@ class LantentODE(Model):
             train_X, train_Y
         )
 
-        latest_ckpt_path = find_latest_ckpt(train_dir)
+        latest_ckpt, latest_ckpt_path = find_latest_ckpt(train_dir)
         if latest_ckpt_path is not None:
             checkpoint = torch.load(latest_ckpt_path)
             self.func.load_state_dict(checkpoint["func_state_dict"])
@@ -112,7 +112,7 @@ class LantentODE(Model):
         if use_pretrained_model:
             pass  # no need to retrain
         else:
-            pbar = tqdm(range(train_epoch))
+            pbar = tqdm(np.arange(latest_ckpt, train_epoch + 1))
             for itr in pbar:
                 optimizer.zero_grad()
                 total_logpx, total_kl_z0, total_kl_zd, total_mse = 0.0, 0.0, 0.0, 0.0
@@ -596,4 +596,5 @@ def find_latest_ckpt(train_dir, prefix="ckpt_epoch_", suffix=".pth"):
     ckpts = [(int(f.split(prefix)[-1].split(suffix)[0]), f) for f in ckpt_files]
     ckpts.sort()  # sort by epoch number
 
-    return ckpts[-1][1]  # return the path of the largest epoch
+    ckpt_epoch, ckpt_path = ckpts[-1]
+    return ckpt_epoch, ckpt_path  # return the path of the largest epoch
