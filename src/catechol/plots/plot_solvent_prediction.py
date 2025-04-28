@@ -21,7 +21,7 @@ def _plot_model_mean_and_confidence(model: Model, solvent_name: str, temperature
             label=target,
         )
 
-        k = 1.0
+        k = 1.96
         ax.fill_between(
             predictions["Residence Time"],
             predictions[f"{target} mean"] - k * np.sqrt(predictions[f"{target} var"]),
@@ -30,25 +30,32 @@ def _plot_model_mean_and_confidence(model: Model, solvent_name: str, temperature
             alpha=0.2,
         )
 
-def _plot_ground_truth(test_X: pd.DataFrame, test_Y: pd.DataFrame, ax: plt.Axes):
+def _plot_ground_truth(test_X: pd.DataFrame, test_Y: pd.DataFrame, temperature: float, ax: plt.Axes):
+    temp_mask = test_X["Temperature"] == temperature
     for target in TARGET_LABELS:
         color = style.TARGET_TO_COLOR[target]
         ax.scatter(
-            test_X["Residence Time"],
-            test_Y[target],
+            test_X.loc[temp_mask, "Residence Time"],
+            test_Y.loc[temp_mask, target],
             color=color,
             edgecolors="black",
             label="Ground Truth",
         )
 
 def plot_solvent_prediction(model: Model, test_X: pd.DataFrame, test_Y: pd.DataFrame) -> plt.Axes:
-    fig, ax = plt.subplots()
-    solvent = test_X["SOLVENT NAME"].unique()[0]
-    _plot_model_mean_and_confidence(model, solvent, 225, ax)
-    _plot_ground_truth(test_X, test_Y, ax)
-    ax.legend()
-    ax.set_xlabel("Residence Time (min)")
-    ax.set_ylabel("Yield (%)")
-    ax.set_ylim(-0.05, 1.0)
-    ax.set_title(f"Solvent: {solvent}")
-    return ax
+    fig, axs = plt.subplots(ncols=2, figsize=(6, 4), sharey=True)
+    solvent = test_X["SOLVENT NAME"].iloc[0]
+    _plot_model_mean_and_confidence(model, solvent, 175, axs[0])
+    _plot_model_mean_and_confidence(model, solvent, 225, axs[1])
+    _plot_ground_truth(test_X, test_Y, 175, axs[0])
+    _plot_ground_truth(test_X, test_Y, 225, axs[1])
+    for ax in axs:
+        ax.legend()
+        ax.set_xlabel("Residence Time (min)")
+        ax.set_ylim(-0.05, 1.0)
+
+    axs[0].set_title("Temperature: 175C")
+    axs[0].set_ylabel("Yield (%)")
+    axs[1].set_title("Temperature: 225C")
+    fig.suptitle(f"Solvent: {solvent}")
+    return fig
