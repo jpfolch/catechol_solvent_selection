@@ -4,37 +4,8 @@ from typing import Literal
 import pandas as pd
 
 FEAT_DIRECTORY = Path("data/featurization_look_ups")
-FEATURIZATIONS = ["acs_pca_descriptors", "drfps", "fragprints", "spange_descriptors"]
-FeaturizationType = Literal["acs_pca_descriptors", "drfps", "fragprints", "spange_descriptors"]
-
-def _load_featurization_lookup(featurization: FeaturizationType):
-    file_path = FEAT_DIRECTORY / f"{featurization}_lookup.csv"
-    assert (
-        file_path.exists()
-    ), f"Featurization lookup does not exist at {file_path.absolute()}"
-    return pd.read_csv(file_path, index_col=0)
-
-
-def _remove_constant_values_from_featurization(
-    featurization_lookup: pd.DataFrame,
-) -> pd.DataFrame:
-    """Remove any features that are constant across all solvents.
-
-    This is useful for reducing the dimensionality of large featurizations."""
-    constant_columns = (featurization_lookup == featurization_lookup.iloc[0]).all(
-        axis=0
-    )
-    return featurization_lookup.loc[:, ~constant_columns]
-
-def _normalize_featurization(
-    df: pd.DataFrame,
-) -> pd.DataFrame:
-    """Map each column of the featurization to the interval [0, 1].
-    
-    This may not be suitable for PCA featurizations, where the relative lengthscale
-    of each dimension may be important."""
-    return (df - df.min()) / (df.max() - df.min())
-
+FEATURIZATIONS = ["acs_pca_descriptors", "drfps", "fragprints", "spange_descriptors", "smiles"]
+FeaturizationType = Literal["acs_pca_descriptors", "drfps", "fragprints", "spange_descriptors", "smiles"]
 
 
 def _get_featurization_from_series(
