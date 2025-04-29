@@ -1,7 +1,7 @@
 from catechol.data.loader import load_single_solvent_data, train_test_split
 from catechol.plots.plot_solvent_prediction import plot_solvent_prediction
 from catechol.data.data_labels import INPUT_LABELS_SINGLE_SOLVENT
-from catechol.models import LantentODE
+from catechol.models import ExplicitODE
 from catechol import metrics
 from catechol.data.loader import (
     generate_leave_one_out_splits,
@@ -10,11 +10,9 @@ from catechol.data.loader import (
 )
 from matplotlib import pyplot as plt
 
-model = LantentODE(
-    latent_state_dim=16,
-    latent_dynamics_dim=64,
+model = ExplicitODE(
+    dynamics_dim=64,
     h_dim_ode=32,
-    h_dim_x0=32,
     h_dim_dynmcs=32,
     h_dim_dec=32,
     featurization_dim=5,
@@ -44,7 +42,7 @@ model.train(
     learning_rate=1e-3,
     train_epoch=100,
     use_pretrained_model=False,
-    train_dir="/homes/jqing/codes/catechol_solvent_selection/exps/lode_exclude_15/",
+    train_dir="/homes/jqing/codes/catechol_solvent_selection/exps/exp_ode/",
     save_freq=10,
     mc_sample_num=32,
     kl_weight=1.0,
@@ -68,4 +66,4 @@ plot_solvent_prediction(model, test_X, test_Y)
 (train_X, train_Y), (test_X, test_Y) = next(split_generator)
 plot_solvent_prediction(model, test_X, test_Y)
 
-plt.savefig("LODE_pred.png", dpi=300)
+plt.savefig("EODE_pred.png", dpi=300)

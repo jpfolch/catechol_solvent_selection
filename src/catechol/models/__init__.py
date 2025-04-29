@@ -1,10 +1,11 @@
 from .base_model import Model
 from .gp import GPModel
-from .lode import LantentODE
+from .lode import LantentODE, ExplicitODE
 
 ALL_MODELS = {
     "GPModel": GPModel,
     "LatentODE": LantentODE,
+    "ExplicitODE": ExplicitODE,
 }
 
 
