@@ -1,8 +1,10 @@
 from .base_model import Model
 from .gp import GPModel
+from .llm import LLMModel
 
 ALL_MODELS = {
     "GPModel": GPModel,
+    "LLMModel": LLMModel,
 }
 
 
