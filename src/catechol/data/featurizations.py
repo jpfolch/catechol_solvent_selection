@@ -9,7 +9,7 @@ FeaturizationType = Literal["acs_pca_descriptors", "drfps", "fragprints", "spang
 
 
 def _get_featurization_from_series(
-    solvents: pd.Series, featurization: FeaturizationType, remove_constant: bool = False
+    solvents: pd.Series, featurization: FeaturizationType, remove_constant: bool, normalize_feats: bool
 ) -> pd.DataFrame:
     """Return the featurizations for a sequence of solvents.
 
@@ -20,24 +20,24 @@ def _get_featurization_from_series(
             f"Expected featurization in {FEATURIZATIONS}; got {featurization}."
         )
 
-    file_path = FEAT_DIRECTORY / f"{featurization}_lookup.csv"
-    assert (
-        file_path.exists()
-    ), f"Featurization lookup does not exist at {file_path.absolute()}"
-
-    featurization_lookup = pd.read_csv(file_path, index_col=0).rename_axis(
+    featurization_lookup = _load_featurization_lookup(featurization).rename_axis(
         solvents.name, axis="index"
     )
+    
     if remove_constant:
-        featurization_lookup = remove_constant_values_from_featurization(
+        featurization_lookup = _remove_constant_values_from_featurization(
             featurization_lookup
         )
+
+    if normalize_feats:
+        featurization_lookup = _normalize_featurization(featurization_lookup)
+
     features = featurization_lookup.loc[solvents]
     return features.reset_index().set_index(solvents.index)
 
 
 def featurize_input_df(
-    X_df: pd.DataFrame, featurization: FeaturizationType, remove_constant: bool = False
+    X_df: pd.DataFrame, featurization: FeaturizationType, remove_constant: bool = False, normalize_feats: bool = False,
 ) -> pd.DataFrame:
     """Replace the SOLVENT NAME column(s) with their featurized representation.
 
@@ -48,7 +48,7 @@ def featurize_input_df(
             continue
 
         feat = _get_featurization_from_series(
-            X_df[solvent_name_column], featurization, remove_constant
+            X_df[solvent_name_column], featurization, remove_constant, normalize_feats
         )
         if solvent_name_column in ["SOLVENT A NAME", "SOLVENT B NAME"]:
             # if this is the full dataset, extract either "A" or "B" from column name
@@ -70,15 +70,3 @@ def featurize_input_df(
         )
 
     return X_df
-
-
-def remove_constant_values_from_featurization(
-    featurization_lookup: pd.DataFrame,
-) -> pd.DataFrame:
-    """Remove any features that are constant across all solvents.
-
-    This is useful for reducing the dimensionality of large featurizations."""
-    constant_columns = (featurization_lookup == featurization_lookup.iloc[0]).all(
-        axis=0
-    )
-    return featurization_lookup.loc[:, ~constant_columns]

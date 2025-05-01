@@ -19,7 +19,7 @@ class GPModel(Model):
         self.multitiask = multitask
 
     def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
-        train_X_featurized = featurize_input_df(train_X, self.featurization)
+        train_X_featurized = featurize_input_df(train_X, self.featurization, remove_constant=True, normalize_feats=True)
         train_X_tensor = torch.tensor(
             train_X_featurized.to_numpy(), dtype=torch.float64
         )
@@ -32,7 +32,7 @@ class GPModel(Model):
         fit_gpytorch_mll(mll)
 
     def _predict(self, test_X: pd.DataFrame) -> pd.DataFrame:
-        test_X_featurized = featurize_input_df(test_X, self.featurization)
+        test_X_featurized = featurize_input_df(test_X, self.featurization, remove_constant=True, normalize_feats=True)
         test_X_tensor = torch.from_numpy(test_X_featurized.to_numpy()).to(torch.float64)
         with torch.no_grad():
             preds = self.model.posterior(test_X_tensor)
