@@ -1,20 +1,24 @@
+import argparse
+import textwrap
+
 import pandas as pd
+import tqdm
 from catechol import metrics
 from catechol.data.data_labels import INPUT_LABELS_SINGLE_SOLVENT
+from catechol.data.featurizations import FeaturizationType
 from catechol.data.loader import (
     generate_leave_one_out_splits,
     load_single_solvent_data,
+    replace_repeated_measurements_with_average,
 )
 from catechol.models import get_model
-from catechol.plots.plot_solvent_prediction import plot_solvent_prediction
-import argparse
-from catechol.data.featurizations import FeaturizationType
-import textwrap
+
 
 class StoreDict(argparse.Action):
     """Custom action to support passing kwargs.
-    
+
     https://stackoverflow.com/a/11762020"""
+
     def __call__(self, parser, namespace, values, option_string=None):
         # Create or retrieve an existing dictionary from the namespace.
         kwargs_dict = {}
@@ -30,6 +34,7 @@ class StoreDict(argparse.Action):
             kwargs_dict[key] = val
         setattr(namespace, self.dest, kwargs_dict)
 
+
 def main(model_name: str, featurization: FeaturizationType, kwargs):
     model = get_model(model_name=model_name, featurization=featurization, **kwargs)
     X, Y = load_single_solvent_data()
@@ -40,10 +45,11 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
 
     # this will generate all of the possible leave-one-out splits of the dataset
     split_generator = generate_leave_one_out_splits(X, Y)
-    for i, split in enumerate(split_generator):
+    for i, split in tqdm.tqdm(enumerate(split_generator)):
         (train_X, train_Y), (test_X, test_Y) = split
         model.train(train_X, train_Y)
 
+        test_X, test_Y = replace_repeated_measurements_with_average(test_X, test_Y)
         predictions = model.predict(test_X)
 
         # calculate some metrics
@@ -51,13 +57,16 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
         nlpd = metrics.nlpd(predictions, test_Y)
         test_solvent = test_X.iloc[0]["SOLVENT NAME"]
 
-        result = pd.DataFrame({"Test solvent": test_solvent, "mse": mse, "nlpd": nlpd}, index=[i])
+        result = pd.DataFrame(
+            {"Test solvent": test_solvent, "mse": mse, "nlpd": nlpd}, index=[i]
+        )
         results = pd.concat((results, result))
 
     return results
 
+
 if __name__ == "__main__":
-    argparser  = argparse.ArgumentParser(
+    argparser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description="Evaluate a model on the single solvent dataset.",
         epilog=textwrap.dedent(
@@ -65,12 +74,19 @@ if __name__ == "__main__":
             Example usage:
                 python scripts/eval_single_solvents.py -m "GPModel" -f "drfps" -c multitask=True
             """
-        )
+        ),
     )
     argparser.add_argument("-m", "--model", type=str)
     argparser.add_argument("-f", "--featurization", type=str)
-    argparser.add_argument("-c", "--config", action=StoreDict, nargs="+",
-        help="Store kwargs-style dictionary to support arbitrary config to models.")
+    argparser.add_argument(
+        "-c",
+        "--config",
+        action=StoreDict,
+        nargs="+",
+        help="Store kwargs-style dictionary to support arbitrary config to models.",
+    )
 
     args = argparser.parse_args()
-    results = main(args.model, args.featurization, args.config)
+    # if no config is passed, create an empty dictionary
+    config = args.config or {}
+    results = main(args.model, args.featurization, config)
