@@ -41,7 +41,7 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
     # remove unnecessary columns
     X = X[INPUT_LABELS_SINGLE_SOLVENT]
 
-    results = pd.DataFrame(columns=["Test catalyst", "mse", "nlpd"])
+    results = pd.DataFrame(columns=["Test solvent", "mse", "nlpd"])
 
     # this will generate all of the possible leave-one-out splits of the dataset
     split_generator = generate_leave_one_out_splits(X, Y)
