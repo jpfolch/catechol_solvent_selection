@@ -8,6 +8,25 @@ import pandas as pd
 from catechol.data.data_labels import TARGET_LABELS
 
 
+def replace_repeated_measurements_with_average(
+    X: pd.DataFrame, Y: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Replace any measurements taken at the same time/conditions with their mean.
+
+    This can be used when training models, to avoid biasing towards this data, or
+    during testing so that model performance is not overly weighted by prediction
+    at datapoints with more observations.
+
+    This will reduce the number of observations."""
+
+    df = pd.concat((X, Y), axis="columns")
+    # round residence time, as the time varies by +-0.05
+    df["Residence Time"] = df["Residence Time"].round(decimals=1)
+    grpd = df.groupby(by=X.columns.to_list()).mean().reset_index()
+    X_avgd, Y_avgd = grpd[X.columns], grpd[Y.columns]
+    return X_avgd, Y_avgd
+
+
 def load_single_solvent_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     """Load the train X and Y dataframes for the single solvent experiments."""
     path = Path("data/single_solvent/catechol_single_solvent_yields.csv")
