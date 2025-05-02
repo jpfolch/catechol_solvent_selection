@@ -17,15 +17,15 @@ import matplotlib.pyplot as plt
 model_name = "seyonec/ChemBERTa-zinc-base-v1"#"rxnfp-pretrained"#"sagawa/ReactionT5v1-yield"#"Parsa/Buchwald-Hartwig-Yield-prediction" #
 
 model = LLMModel(model_name = model_name,
-                 freeze_backbone = False,
-                 learning_rate_backbone = 1e-3,
+                 freeze_backbone = True,
+                 learning_rate_backbone = 1e-4,
                  learning_rate_head = 1e-3,
                  dropout_backbone= 0.000001,
                  dropout_head = 0.0000001,
                  use_pooler_output = True,
                  custom_head = None,
                  max_length_padding= None,
-                 epochs = 100,
+                 epochs = 1000,
                  use_validation = "leave_one_solvent_out",
                  batch_size = 32
                  )

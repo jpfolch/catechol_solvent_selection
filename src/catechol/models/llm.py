@@ -56,6 +56,8 @@ class LLMModel(Model):
         self.numerical_std = None
         self.train_losses = []
         self.val_losses = []
+        self.optimizer = None
+        self.loss_fn = None
 
 
     def _set_seed(self, seed: int = 42):
@@ -151,7 +153,7 @@ class LLMModel(Model):
             train_Y_split, val_Y = train_test_split(train_Y, train_percentage=0.8, seed=1)
         return train_X_split, train_Y_split, val_X, val_Y
 
-    def _prepare_training_tensors(self, X: pd.DataFrame, Y: pd.DataFrame):
+    def _prepare_training_tensors(self, X: pd.DataFrame, Y: pd.DataFrame = None):
         smiles = X["Reaction SMILES"].tolist()
         numerical_values = X[["Residence Time", "Temperature"]].values
         numerical_tensor = torch.tensor(numerical_values, dtype=torch.float32).to(self.device)
@@ -161,7 +163,11 @@ class LLMModel(Model):
             self.numerical_std = numerical_tensor.std(dim=0, keepdim=True)
 
         normalized_numerical = self._normalize_numerical(numerical_tensor)
-        targets = torch.tensor(Y.values, dtype=torch.float32).to(self.device)
+        if Y is not None:
+            targets = torch.tensor(Y.values, dtype=torch.float32).to(self.device)
+        else:
+            targets = None
+            
         input_ids, attention_mask = self.tokenize_smiles(smiles)
         return (
             input_ids.to(self.device),
@@ -240,16 +246,7 @@ class LLMModel(Model):
         self.head.eval()
         self.backbone.eval()
 
-        smiles = test_X["Reaction SMILES"].tolist()
-        numerical_values = test_X[["Residence Time", "Temperature"]].values
-        numerical_tensor = torch.tensor(numerical_values, dtype=torch.float32).to(self.device)
-
-        # Apply stored normalization
-        normalized_numerical = self._normalize_numerical(numerical_tensor)
-
-        input_ids, attention_mask = self.tokenize_smiles(smiles)
-        input_ids = input_ids.to(self.device)
-        attention_mask = attention_mask.to(self.device)
+        input_ids, attention_mask, normalized_numerical, _ = self._prepare_training_tensors(test_X)
 
         with torch.no_grad():
             preds = self._full_model_prediction(input_ids, attention_mask, normalized_numerical)
