@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from catechol.data.data_labels import get_data_labels_mean_var
 from .base_model import Model
 from catechol.data.loader import (generate_leave_one_out_splits, train_test_split)
-
+from catechol.data.featurizations import featurize_input_df
 
 
 class MLPModel(Model):
@@ -21,10 +21,8 @@ class MLPModel(Model):
         epochs: int = 100,
         use_validation: str = None,
         batch_size: int = 32,
-        custom_MLP = None,
-        use_solvent_embedding: bool = False,
-        featurization_lookup: dict = None,
-        solvent_column: str = "SOLVENT NAME"
+        custom_MLP = None,   
+        featurization_type: str = "acs_pca_descriptors",
     ):
         super().__init__()
         
@@ -32,11 +30,9 @@ class MLPModel(Model):
         self.dropout = dropout
         self.epochs = epochs
         self.use_validation = use_validation
-        self.batch_size = batch_size
-        self.use_solvent_embedding = use_solvent_embedding
-        self.featurization_lookup = featurization_lookup
-        self.solvent_column = solvent_column
+        self.batch_size = batch_size        
         self.custom_MLP = custom_MLP
+        self.featurization_type = featurization_type
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._set_seed()
 
@@ -44,8 +40,7 @@ class MLPModel(Model):
         self.numerical_mean = None
         self.numerical_std = None
         self.train_losses = []
-        self.val_losses = []
-        self.solvent_to_idx = {}        
+        self.val_losses = []           
         self.MLP = None
         self.optimizer = None
         self.loss_fn = None
@@ -91,30 +86,18 @@ class MLPModel(Model):
 
     def _prepare_training_tensors(self, X: pd.DataFrame, Y: pd.DataFrame = None):
        
+        # Creating featurization of the solvent
+        X_input = featurize_input_df(X, self.featurization_type)
+        
         # Numerical features
-        numerical_tensor = torch.tensor(X[["Residence Time", "Temperature"]].values, dtype=torch.float32).to(self.device)
+        numerical_tensor = torch.tensor(X_input.values, dtype=torch.float32).to(self.device)
 
         if self.numerical_mean is None or self.numerical_std is None:
             self.numerical_mean = numerical_tensor.mean(dim=0, keepdim=True)
             self.numerical_std = numerical_tensor.std(dim=0, keepdim=True)
 
-        normalized_numerical = self._normalize_numerical(numerical_tensor)
-
-        # Solvent features
-        if self.use_solvent_embedding:
-            solvent_features = np.stack([self.featurization_lookup[name] for name in X[self.solvent_column]])
-            solvent_tensor = torch.tensor(solvent_features, dtype=torch.float32).to(self.device)
-        else:
-            if not self.solvent_to_idx:
-                unique_solvents = sorted(X[self.solvent_column].unique())
-                self.solvent_to_idx = {name: i for i, name in enumerate(unique_solvents)}
-            indices = [self.solvent_to_idx[name] for name in X[self.solvent_column]]
-            one_hot = torch.zeros(len(indices), len(self.solvent_to_idx))
-            one_hot[range(len(indices)), indices] = 1.0
-            solvent_tensor = one_hot.to(self.device)
-
-        input_tensor = torch.cat([normalized_numerical, solvent_tensor], dim=1)
-
+        input_tensor = self._normalize_numerical(numerical_tensor)
+        
         if Y is not None:
             targets = torch.tensor(Y.values, dtype=torch.float32).to(self.device)
         else:
@@ -146,7 +129,7 @@ class MLPModel(Model):
             best_MLP = None
         
         # Set MLP and optimizer
-        num_features = train_X_split.shape[1]
+        num_features = train_inputs.shape[1]
         self._init_MLP_and_optimizer(num_features)     
         self.MLP.train()
         
@@ -168,7 +151,7 @@ class MLPModel(Model):
                 with torch.no_grad():
                     val_predictions = self.MLP(val_inputs)
                     val_loss = self.loss_fn(val_predictions, val_targets)
-                self.val_losses.append(val_loss)
+                self.val_losses.append(val_loss.item())
                 # Save best weights
                 if val_loss.item() < best_val_loss:
                     best_val_loss = val_loss.item()
