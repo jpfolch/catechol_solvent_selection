@@ -6,6 +6,7 @@ import random
 import numpy as np
 import os
 import pkg_resources
+import time
 from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
 from transformers import AutoTokenizer, AutoModel, AutoConfig
@@ -28,8 +29,9 @@ class LLMModel(Model):
         custom_head: nn.Module = None,
         max_length_padding: int = None,
         epochs: int = 10,
+        time_limit: float = 10800,
         use_validation: str = None,
-        batch_size: int = None
+        batch_size: int = None,        
     ):
         super().__init__()
         self._set_seed()
@@ -45,6 +47,7 @@ class LLMModel(Model):
         self.epochs = epochs
         self.use_validation = use_validation
         self.batch_size = batch_size
+        self.time_limit = time_limit
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # To be set during training
@@ -202,6 +205,7 @@ class LLMModel(Model):
             best_head_state, best_backbone_state = None, None
 
         # Then your training loop:
+        start_time = time.time()
         for epoch in range(self.epochs):
             epoch_loss = 0.0
             for batch in tqdm(loader, desc=f"Epoch {epoch+1}/{self.epochs}"):
@@ -233,7 +237,9 @@ class LLMModel(Model):
             avg_loss = epoch_loss / len(loader.dataset)
             self.train_losses.append(avg_loss)
             print(f"Epoch {epoch+1}/{self.epochs} | Train Loss: {avg_loss:.4f} | Validation Loss: {val_loss}")
-
+            if time.time() - start_time > self.time_limit:
+                print(f"Stopping training due to time limit ({time.time() - start_time} seconds) reached.")
+                break
         if validation:
             # Load best model
             self.head.load_state_dict(best_head_state)
