@@ -5,7 +5,6 @@ from catechol.data.loader import (
     generate_leave_one_ramp_out_splits,
     load_solvent_ramp_data,
 )
-import pandas as pd
 from catechol.models import GPModel
 from catechol.plots.plot_solvent_prediction import plot_solvent_ramp_prediction
 
