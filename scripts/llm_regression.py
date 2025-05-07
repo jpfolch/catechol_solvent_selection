@@ -1,66 +1,108 @@
 import os
-os.chdir('./src')
+import pandas as pd
 
-from catechol.data.data_labels import INPUT_LABELS_SINGLE_SOLVENT
+os.chdir('./src')
 from catechol.data.loader import (
     generate_leave_one_out_splits,
     load_single_solvent_data,
-    train_test_split,
+    replace_repeated_measurements_with_average,
 )
-
 os.chdir('..')
+
 from catechol.models import LLMModel
-from catechol.plots.plot_solvent_prediction import plot_solvent_prediction
 from catechol import metrics
-import matplotlib.pyplot as plt
 
-model_name = "seyonec/ChemBERTa-zinc-base-v1"#"rxnfp-pretrained"#"sagawa/ReactionT5v1-yield"#"Parsa/Buchwald-Hartwig-Yield-prediction" #
-
-model = LLMModel(model_name = model_name,
-                 freeze_backbone = True,
-                 learning_rate_backbone = 1e-4,
-                 learning_rate_head = 1e-3,
-                 dropout_backbone= 0.000001,
-                 dropout_head = 0.0000001,
-                 use_pooler_output = True,
-                 custom_head = None,
-                 max_length_padding= None,
-                 epochs = 1000,
-                 use_validation = "leave_one_solvent_out",
-                 batch_size = 32
-                 )
-
+# --- Parameter grids ---
+model_names = [
+    "seyonec/ChemBERTa-zinc-base-v1",
+    "rxnfp-pretrained",
+]
+dropout_head_values = [1e-6, 1e-4]
+dropout_backbone_values = [1e-6, 1e-4]
+lr_head_values = [1e-4, 1e-3]
+lr_backbone_values = [1e-5, 1e-4]
+pooler_output_values = [True, False]
+fixed_backbone_values = [True, False]
+# --- Load dataset ---
 X, Y = load_single_solvent_data()
-# remove unnecessary columns
-X = X[['Residence Time', 'Temperature','Reaction SMILES','SOLVENT NAME']]
-model.train(train_X = X, train_Y = Y)
+X = X[['Residence Time', 'Temperature', 'Reaction SMILES', 'SOLVENT NAME']]
 
+results = []
 
+# --- Loop over all parameter combinations ---
+for model_name in model_names:
+    for dropout_head in dropout_head_values:
+        for dropout_backbone in dropout_backbone_values:
+            for lr_head in lr_head_values:
+                for lr_backbone in lr_backbone_values:
+                    for pooler_output in pooler_output_values:
+                        for fixed_backbone in fixed_backbone_values:
+                            print(f"\nTraining model={model_name}, lr_head={lr_head}, lr_backbone={lr_backbone}, dropout_head={dropout_head}, dropout_backbone={dropout_backbone}")
+        
+                            split_generator = generate_leave_one_out_splits(X, Y)
+                            mse_scores = []
+                            solvent_names = []
+        
+                            for split_idx, ((train_X, train_Y), (test_X, test_Y)) in enumerate(split_generator, 1):
+                                # Initialize model
+                                model = LLMModel(
+                                    model_name=model_name,
+                                    freeze_backbone=fixed_backbone,
+                                    learning_rate_backbone=lr_backbone,
+                                    learning_rate_head=lr_head,
+                                    dropout_backbone=dropout_backbone,
+                                    dropout_head=dropout_head,
+                                    use_pooler_output=pooler_output,
+                                    custom_head=None,
+                                    max_length_padding=None,
+                                    epochs=100,
+                                    #use_validation="leave_one_solvent_out",
+                                    batch_size=32
+                                )
+        
+                                # Train and evaluate
+                                model.train(train_X=train_X, train_Y=train_Y)
+                                test_X, test_Y = replace_repeated_measurements_with_average(test_X, test_Y)
+                                predictions = model.predict(test_X)
+                                mse = metrics.mse(predictions, test_Y)
+        
+                                solvent = test_X['SOLVENT NAME'].unique()[0]
+                                mse_scores.append(mse)
+                                solvent_names.append(solvent)
+        
+                                print(f"  Split {split_idx} ({solvent}): MSE = {mse:.4f}")
+        
+                            avg_mse = sum(mse_scores) / len(mse_scores)
+        
+                            results.append({
+                                'model_name': model_name,
+                                'dropout_head': dropout_head,
+                                'dropout_backbone': dropout_backbone,
+                                'lr_head': lr_head,
+                                'lr_backbone': lr_backbone,
+                                'avg_mse': avg_mse,
+                                'all_mse': mse_scores,
+                                'solvent_names': solvent_names
+                            })
 
-split_generator = generate_leave_one_out_splits(X, Y)
-# this will generate a new split each time you call `next` on the generator
-# you can, instead, use a for loop to iterate over split_generator
-(train_X, train_Y), (test_X, test_Y) = next(split_generator)
+# --- Convert results to expanded DataFrame ---
+results_expanded = []
+for entry in results:
+    base = {
+        'model_name': entry['model_name'],
+        'dropout_head': entry['dropout_head'],
+        'dropout_backbone': entry['dropout_backbone'],
+        'lr_head': entry['lr_head'],
+        'lr_backbone': entry['lr_backbone'],
+        'avg_mse': entry['avg_mse'],
+    }
+    for mse, solvent in zip(entry['all_mse'], entry['solvent_names']):
+        base[f'mse_{solvent}'] = mse
+    results_expanded.append(base)
 
-model.train(train_X = train_X, train_Y = train_Y)
+results_df = pd.DataFrame(results_expanded)
+results_df.sort_values(by='avg_mse', inplace=True)
+results_df.to_csv("llm_mse_hyperparam_results.csv", index=False)
 
-
-
-train_X, test_X = train_test_split(X, train_percentage=0.8, seed=1)
-train_Y, test_Y = train_test_split(Y, train_percentage=0.8, seed=1)
-predictions = model.predict(test_X)
-print(predictions)
-
-# calculate some metrics
-mse = metrics.mse(predictions, test_Y)
-nlpd = metrics.nlpd(predictions, test_Y)
-print(f"{mse=}, {nlpd=}")
-
-# plot the predictions
-plot_solvent_prediction(model, test_X, test_Y)
-(train_X, train_Y), (test_X, test_Y) = next(split_generator)
-plot_solvent_prediction(model, test_X, test_Y)
-(train_X, train_Y), (test_X, test_Y) = next(split_generator)
-plot_solvent_prediction(model, test_X, test_Y)
-
-plt.show()
+print("\nTop configurations by MSE:")
+print(results_df.head())
