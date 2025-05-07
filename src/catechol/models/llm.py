@@ -47,10 +47,6 @@ class LLMModel(Model):
         self.batch_size = batch_size
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        # Set up backbone, tokenizer, head, optimizer
-        self._init_backbone_and_tokenizer()
-        self._init_head_and_optimizer()
-
         # To be set during training
         self.numerical_mean = None
         self.numerical_std = None
@@ -58,7 +54,10 @@ class LLMModel(Model):
         self.val_losses = []
         self.optimizer = None
         self.loss_fn = None
-
+        
+        # Set up backbone, tokenizer, head, optimizer
+        self._init_backbone_and_tokenizer()
+        self._init_head_and_optimizer()
 
     def _set_seed(self, seed: int = 42):
         random.seed(seed)
