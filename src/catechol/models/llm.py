@@ -131,7 +131,7 @@ class LLMModel(Model):
     def _full_model_prediction(self, input_ids, attention_mask, normalized_numerical):
         backbone_output = self._get_backbone_output(input_ids, attention_mask, self.use_pooler_output)
         # Normalizing output of backbone
-        backbone_output = (backbone_output - backbone_output.mean(dim=1, keepdim=True)) / (backbone_output.std(dim=1, keepdim=True) + 1e-6)
+        #backbone_output = (backbone_output - backbone_output.mean(dim=1, keepdim=True)) / (backbone_output.std(dim=1, keepdim=True) + 1e-6)
 
         combined = torch.cat([backbone_output, normalized_numerical], dim=1)
         return self.head(combined)

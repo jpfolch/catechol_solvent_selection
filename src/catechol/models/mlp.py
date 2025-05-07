@@ -87,7 +87,7 @@ class MLPModel(Model):
     def _prepare_training_tensors(self, X: pd.DataFrame, Y: pd.DataFrame = None):
        
         # Creating featurization of the solvent
-        X_input = featurize_input_df(X, self.featurization_type)
+        X_input = featurize_input_df(X, self.featurization_type, remove_constant = True)
         
         # Numerical features
         numerical_tensor = torch.tensor(X_input.values, dtype=torch.float32).to(self.device)
@@ -95,9 +95,10 @@ class MLPModel(Model):
         if self.numerical_mean is None or self.numerical_std is None:
             self.numerical_mean = numerical_tensor.mean(dim=0, keepdim=True)
             self.numerical_std = numerical_tensor.std(dim=0, keepdim=True)
-
-        input_tensor = self._normalize_numerical(numerical_tensor)
         
+        #if self.featurization_type == "acs_pca_descriptors":
+        #    input_tensor = self._normalize_numerical(numerical_tensor)
+        input_tensor = numerical_tensor
         if Y is not None:
             targets = torch.tensor(Y.values, dtype=torch.float32).to(self.device)
         else:
