@@ -1,27 +1,27 @@
 ,solvent smiles
 Cyclohexane,C1CCCCC1
-Ethyl Acetate,CCOC(=O)C
+Ethyl Acetate,O=C(OCC)C
 Acetic Acid,CC(=O)O
-2-Methyltetrahydrofuran [2-MeTHF],CC1CCCO1
+2-Methyltetrahydrofuran [2-MeTHF],O1C(C)CCC1
 "1,1,1,3,3,3-Hexafluoropropan-2-ol",C(C(F)(F)F)(C(F)(F)F)O
-IPA [Propan-2-ol],CC(C)O
+IPA [Propan-2-ol],CC(O)C
 Ethanol,CCO
 Methanol,CO
-"Ethylene Glycol [1,2-Ethanediol]",C(CO)O
+"Ethylene Glycol [1,2-Ethanediol]",OCCO
 Acetonitrile,CC#N
 Water,O
 Diethyl Ether [Ether],CCOCC
 MTBE [tert-Butylmethylether],CC(C)(C)OC
 Dimethyl Carbonate,COC(=O)OC
 tert-Butanol [2-Methylpropan-2-ol],CC(C)(C)O
-"DMA [N,N-Dimethylacetamide]",CC(=O)N(C)C
-"2,2,2-Trifluoroethanol",C(C(F)(F)F)O
+"DMA [N,N-Dimethylacetamide]",CN(C)C(C)=O
+"2,2,2-Trifluoroethanol",OCC(F)(F)F
 Dihydrolevoglucosenone (Cyrene),[C@H]12CCC([C@H](OC1)O2)=O
 Decanol,CCCCCCCCCCO
 Butanone [MEK],CCC(=O)C
 Ethyl Lactate,CCOC(=O)C(C)O
-Methyl Propionate,CCC(=O)OC
+Methyl Propionate,O=C(OC)CC
 THF [Tetrahydrofuran],C1CCOC1
 Water.Acetonitrile,O.CC#N
 Acetonitrile.Acetic Acid,CC#N.CC(=O)O
-"Water.2,2,2-Trifluoroethanol",O.C(C(F)(F)F)O
+"Water.2,2,2-Trifluoroethanol",O.OCC(F)(F)F
