@@ -12,8 +12,16 @@ dependencies = [
     "gauche>=0.1.6",
     "numpy>=2.2.4",
     "pandas>=2.2.3",
+    "rxnfp>=0.1.0",
     "torch>=2.6.0",
+    "transformers>=4.51.3",
 ]
+
+[[tool.uv.dependency-metadata]]
+# Manually override the rxnfp requirements to avoid conflicts 
+# https://docs.astral.sh/uv/concepts/resolution/#dependency-metadata
+name = "rxnfp"
+requires-dist = ["simpletransformers"]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I001"]

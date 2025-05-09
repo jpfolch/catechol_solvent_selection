@@ -94,7 +94,7 @@ if __name__ == "__main__":
     results = main(args.model, args.featurization, config)
 
     print(results)
-    out_dir = Path(f"results/full_data/")
+    out_dir = Path("results/full_data/")
     out_dir.mkdir(parents=True, exist_ok=True)
     save_model_name = args.save_model_name or args.model
     results.to_csv(out_dir / f"{save_model_name}.csv", index=False)
