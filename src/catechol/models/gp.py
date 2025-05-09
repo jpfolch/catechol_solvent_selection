@@ -61,7 +61,7 @@ class GPModel(Model):
         self.model = model_cls(train_X_tensor, train_Y_tensor, mean_module=ZeroMean())
 
         mll = ExactMarginalLogLikelihood(self.model.likelihood, self.model)
-        fit_gpytorch_mll(mll)
+        fit_gpytorch_mll(mll, optimizer_kwargs=dict(timeout_sec=30))
 
     def _predict(self, test_X: pd.DataFrame) -> pd.DataFrame:
         test_X_featurized = featurize_input_df(
