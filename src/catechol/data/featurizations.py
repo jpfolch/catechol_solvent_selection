@@ -4,8 +4,16 @@ from typing import Literal
 import pandas as pd
 
 FEAT_DIRECTORY = Path("data/featurization_look_ups")
-FEATURIZATIONS = ["acs_pca_descriptors", "drfps", "fragprints", "spange_descriptors", "smiles"]
-FeaturizationType = Literal["acs_pca_descriptors", "drfps", "fragprints", "spange_descriptors", "smiles"]
+FEATURIZATIONS = [
+    "acs_pca_descriptors",
+    "drfps",
+    "fragprints",
+    "spange_descriptors",
+    "smiles",
+]
+FeaturizationType = Literal[
+    "acs_pca_descriptors", "drfps", "fragprints", "spange_descriptors", "smiles"
+]
 
 
 def _load_featurization_lookup(featurization: FeaturizationType):
@@ -26,18 +34,22 @@ def _remove_constant_values_from_featurization(
     )
     return featurization_lookup.loc[:, ~constant_columns]
 
+
 def _normalize_featurization(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
     """Map each column of the featurization to the interval [0, 1].
-    
+
     This may not be suitable for PCA featurizations, where the relative lengthscale
     of each dimension may be important."""
     return (df - df.min()) / (df.max() - df.min())
 
 
 def _get_featurization_from_series(
-    solvents: pd.Series, featurization: FeaturizationType, remove_constant: bool, normalize_feats: bool
+    solvents: pd.Series,
+    featurization: FeaturizationType,
+    remove_constant: bool,
+    normalize_feats: bool,
 ) -> pd.DataFrame:
     """Return the featurizations for a sequence of solvents.
 
@@ -51,7 +63,7 @@ def _get_featurization_from_series(
     featurization_lookup = _load_featurization_lookup(featurization).rename_axis(
         solvents.name, axis="index"
     )
-    
+
     if remove_constant:
         featurization_lookup = _remove_constant_values_from_featurization(
             featurization_lookup
@@ -65,7 +77,10 @@ def _get_featurization_from_series(
 
 
 def featurize_input_df(
-    X_df: pd.DataFrame, featurization: FeaturizationType, remove_constant: bool = False, normalize_feats: bool = False,
+    X_df: pd.DataFrame,
+    featurization: FeaturizationType,
+    remove_constant: bool = False,
+    normalize_feats: bool = False,
 ) -> pd.DataFrame:
     """Replace the SOLVENT NAME column(s) with their featurized representation.
 

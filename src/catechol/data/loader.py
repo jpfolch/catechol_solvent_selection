@@ -38,6 +38,17 @@ def load_single_solvent_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     return experiments[input_cols], experiments[TARGET_LABELS]
 
 
+def load_solvent_ramp_data() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Load the train X and Y dataframes for the solvent ramp experiments."""
+    path = Path("data/full_data/catechol_full_data_yields.csv")
+    assert path.exists(), f"Experiment data does not exist at {path.absolute()}"
+    experiments = pd.read_csv(path)
+    input_cols = [
+        column for column in experiments.columns if column not in TARGET_LABELS
+    ]
+    return experiments[input_cols], experiments[TARGET_LABELS]
+
+
 def train_test_split(
     df: pd.DataFrame, train_percentage: float, seed: int | None = None
 ):
@@ -78,6 +89,31 @@ def generate_leave_one_out_splits(
     all_solvents = X["SOLVENT NAME"].unique()
     for solvent_name in sorted(all_solvents):
         train_idcs_mask = X["SOLVENT NAME"] != solvent_name
+        yield (
+            (X[train_idcs_mask], Y[train_idcs_mask]),
+            (X[~train_idcs_mask], Y[~train_idcs_mask]),
+        )
+
+
+def generate_leave_one_ramp_out_splits(
+    X: pd.DataFrame, Y: pd.DataFrame
+) -> Generator[
+    tuple[tuple[pd.DataFrame, pd.DataFrame], tuple[pd.DataFrame, pd.DataFrame]],
+    Any,
+    None,
+]:
+    """Generate all leave-one-out splits across the solvent ramps.
+
+    For each split, one of the solvent ramps will be removed from the training
+    set to make a test set.
+    """
+
+    all_solvent_ramps = X[["SOLVENT A NAME", "SOLVENT B NAME"]].drop_duplicates()
+    all_solvent_ramps.sort_values(by=["SOLVENT A NAME", "SOLVENT B NAME"])
+    for _, solvent_pair in all_solvent_ramps.iterrows():
+        train_idcs_mask = (X[["SOLVENT A NAME", "SOLVENT B NAME"]] != solvent_pair).all(
+            axis=1
+        )
         yield (
             (X[train_idcs_mask], Y[train_idcs_mask]),
             (X[~train_idcs_mask], Y[~train_idcs_mask]),
