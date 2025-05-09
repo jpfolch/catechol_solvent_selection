@@ -43,7 +43,7 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
     X = X[INPUT_LABELS_FULL_DATA]
 
     results = pd.DataFrame(columns=["Test solvent", "mse", "nlpd"])
-    out_dir = Path(f"results/full_data/")
+    out_dir = Path("results/full_data/")
     out_dir.mkdir(parents=True, exist_ok=True)
     model_name = model.get_model_name()
 
@@ -68,7 +68,6 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
 
         # store the results as you go
         results.to_csv(out_dir / f"{model_name}.csv", index=False)
-
 
     return results
 
@@ -98,4 +97,3 @@ if __name__ == "__main__":
     # if no config is passed, create an empty dictionary
     config = args.config or {}
     results = main(args.model, args.featurization, config)
-

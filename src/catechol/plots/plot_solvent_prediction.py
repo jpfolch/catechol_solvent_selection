@@ -137,7 +137,9 @@ def plot_solvent_ramp_prediction(
     fig, axs = plt.subplots(ncols=len(temperatures), figsize=(6, 4), sharey=True)
     solvent_a, solvent_b = test_X[["SOLVENT A NAME", "SOLVENT B NAME"]].iloc[0]
     for temperature, ax in zip(temperatures, axs):
-        _plot_ramp_model_mean_and_confidence(model, solvent_a, solvent_b, temperature, ax)
+        _plot_ramp_model_mean_and_confidence(
+            model, solvent_a, solvent_b, temperature, ax
+        )
         _plot_ramp_ground_truth(test_X, test_Y, temperature, ax)
 
         ax.legend()

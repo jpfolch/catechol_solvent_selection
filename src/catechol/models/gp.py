@@ -1,13 +1,12 @@
+import numpy as np
 import pandas as pd
 import torch
-import numpy as np
 from botorch import fit_gpytorch_mll
 from botorch.models import KroneckerMultiTaskGP, SingleTaskGP
-from gpytorch.means import ZeroMean
 from botorch.models.transforms.input import Warp
+from gpytorch.means import ZeroMean
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from gpytorch.priors.torch_priors import LogNormalPrior
-
 
 from catechol.data.data_labels import (
     get_data_labels_mean_var,
@@ -20,7 +19,10 @@ from .base_model import Model
 
 class GPModel(Model):
     def __init__(
-        self, multitask: bool = False, use_input_warp: bool = False, featurization: FeaturizationType | None = None
+        self,
+        multitask: bool = False,
+        use_input_warp: bool = False,
+        featurization: FeaturizationType | None = None,
     ):
         super().__init__(featurization=featurization)
         self.multitask = multitask
@@ -47,12 +49,12 @@ class GPModel(Model):
             ),
             axis="columns",
         )
-    
+
     def _get_input_transform(self, train_X_featurized: pd.DataFrame):
         """Get the warping input transform."""
         if not self.use_input_warp:
             return None
-        
+
         # We only want to warp the time and solvent mixture ratio
         warp_col_mask = train_X_featurized.columns.isin(("Residence Time", "SolventB%"))
         indices = np.argwhere(warp_col_mask).flatten().tolist()
@@ -62,9 +64,9 @@ class GPModel(Model):
         return Warp(
             d,
             indices,
-            concentration0_prior=LogNormalPrior(0.0, 0.30 ** 0.5),
-            concentration1_prior=LogNormalPrior(0.0, 0.30 ** 0.5),
-            bounds=bounds
+            concentration0_prior=LogNormalPrior(0.0, 0.30**0.5),
+            concentration1_prior=LogNormalPrior(0.0, 0.30**0.5),
+            bounds=bounds,
         )
 
     def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
@@ -84,7 +86,9 @@ class GPModel(Model):
         model_cls = KroneckerMultiTaskGP if self.multitask else SingleTaskGP
         warp = self._get_input_transform(train_X_featurized)
 
-        self.model = model_cls(train_X_tensor, train_Y_tensor, mean_module=ZeroMean(), input_transform=warp)
+        self.model = model_cls(
+            train_X_tensor, train_Y_tensor, mean_module=ZeroMean(), input_transform=warp
+        )
 
         mll = ExactMarginalLogLikelihood(self.model.likelihood, self.model)
         fit_gpytorch_mll(mll, optimizer_kwargs=dict(timeout_sec=30))
