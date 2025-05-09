@@ -28,7 +28,7 @@ def load_results():
                 [(model_idx["name"], model_idx["details"], model_idx["featurization"])],
                 names=("Model", "Details", "Featurization"),
             ), 
-            columns=("MSE", "NLPD")
+            columns=("MSE ($\downarrow$)", "NLPD ($\downarrow$)")
         )
 
         all_results_lst.append(result_df)
@@ -38,7 +38,7 @@ def load_results():
 def sort_results(all_results: pd.DataFrame):
     def sorter(idx):
         return idx.map({model: i for i, model in enumerate(ALL_MODELS)})
-    return all_results.sort_index(key=sorter)
+    return all_results.reorder_levels(["Model", "Featurization", "Details"]).sort_index()
 
 def get_latex_table(all_results: pd.DataFrame):
     styler = all_results.style.format(precision=3)
@@ -48,7 +48,7 @@ def get_latex_table(all_results: pd.DataFrame):
 
 if __name__ == "__main__":
     all_results = load_results()
-    sort_results(all_results)
+    all_results = sort_results(all_results)
     print(get_latex_table(all_results))
 
     # indep = all_results.index.get_level_values("Details").str.contains("indep")
