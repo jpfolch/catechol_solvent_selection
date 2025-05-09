@@ -114,6 +114,6 @@ class GPModel(Model):
         pass
 
     def _get_model_name(self) -> str:
-        multi = "_multi" if self.multitask else "_indep"
-        warp = "_warp" if self.use_input_warp else ""
+        multi = "-multi" if self.multitask else "-indep"
+        warp = "-warp" if self.use_input_warp else ""
         return f"{self.__class__.__name__}{multi}{warp}"

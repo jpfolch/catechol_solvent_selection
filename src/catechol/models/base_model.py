@@ -52,7 +52,7 @@ class Model(ABC):
         pass
 
     def get_model_name(self) -> str:
-        return f"{self._get_model_name()}_{self.featurization}"
+        return f"{self._get_model_name()}-{self.featurization}"
     
     def _get_model_name(self) -> str:
         return self.__class__.__name__
