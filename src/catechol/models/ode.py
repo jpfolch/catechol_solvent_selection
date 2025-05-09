@@ -928,48 +928,6 @@ class _HeteroscedasticDecoder(nn.Module):
         return mu, sigma
 
 
-def _unique_with_tolerance(x, tol=1e-6):
-    x, _ = torch.sort(x)
-    unique = [x[0]]
-    idx = [0]
-    for i in range(1, len(x)):
-        if torch.abs(x[i] - unique[-1]) > tol:
-            unique.append(x[i])
-        idx.append(len(unique) - 1)
-    unique = torch.stack(unique)
-    idx = torch.tensor(idx, dtype=torch.long)
-    return unique, torch.atleast_1d(idx)
-
-
-def _formulate_data_as_time_series(
-    x: pd.DataFrame, y: pd.DataFrame | None = None
-) -> tuple[list[tuple[str, float]], list[pd.DataFrame], list[pd.DataFrame]]:
-    """
-    Reformulate the data as a list of time series grouped by (SOLVENT NAME, Temperature).
-    Returns:
-        keys: list of (solvent name, temperature)
-        x_series: list of pd.DataFrame, each containing a trajectory sorted by Residence Time
-        y_series: list of pd.DataFrame, aligned with x_series
-    """
-    # Combine x and y so they can be grouped and sorted together
-    combined = pd.concat([x, y], axis=1)
-    # Group by (SOLVENT NAME, Temperature)
-    grouped = combined.groupby(["SOLVENT NAME", "Temperature"])
-    keys = []
-    x_series = []
-    y_series = None if y is None else []
-    for (solvent, temp), group in grouped:
-        group = group.sort_values(by="Residence Time").reset_index(drop=True)
-        keys.append((solvent, float(temp)))
-        x_series.append(group[["Residence Time"]])  # or other x columns if needed
-        if y is not None:
-            y_series.append(group[y.columns])  # retain all original y columns
-    if y is not None:
-        return keys, x_series, y_series
-    else:
-        return keys, x_series
-
-
 def _formulate_data_as_batch_tensor(
     x: pd.DataFrame, y: pd.DataFrame | None = None
 ) -> tuple[
@@ -1028,75 +986,6 @@ def _formulate_data_as_batch_tensor(
 
     global_time_tensor = torch.tensor(global_time, dtype=torch.float32)
     return keys, x_batch, y_batch, mask, meta, global_time_tensor
-
-
-def _formulate_time_series_as_data(
-    keys: list[tuple[str, float]],
-    x_series: list[pd.DataFrame],
-    pred_means: list[torch.Tensor],
-    pred_vars: list[torch.Tensor],
-) -> tuple:
-    """
-    Reformulate a list of predicted time series back into a single data matrix.
-
-    Args:
-        keys: list of (solvent name, temperature)
-        x_series: list of pd.DataFrame, each containing 'Residence Time' per trajectory
-        pred_means: list of torch.Tensor, each [timesteps, state_dim]
-        pred_vars: list of torch.Tensor, each [timesteps, state_dim]
-
-    Returns:
-        mean: [N, D] array
-        var: [N, D] array
-    """
-
-    dfs_mean = []
-    dfs_var = []
-
-    for (solvent_name, temp), x_df, mean_tensor, var_tensor in zip(
-        keys, x_series, pred_means, pred_vars
-    ):
-        n_time = x_df.shape[0]
-
-        mean_np = mean_tensor.detach().cpu().numpy()  # [timesteps, D]
-        var_np = var_tensor.detach().cpu().numpy()  # [timesteps, D]
-
-        # Create a DataFrame for this trajectory
-        traj_mean_df = pd.DataFrame(
-            mean_np, columns=[f"state_{i}" for i in range(mean_np.shape[-1])]
-        )
-        traj_var_df = pd.DataFrame(
-            var_np, columns=[f"state_{i}" for i in range(var_np.shape[-1])]
-        )
-
-        # Add metadata
-        traj_mean_df["SOLVENT NAME"] = solvent_name
-        traj_mean_df["Temperature"] = temp
-        traj_mean_df["Residence Time"] = x_df["Residence Time"].values  # original times
-
-        traj_var_df["SOLVENT NAME"] = solvent_name
-        traj_var_df["Temperature"] = temp
-        traj_var_df["Residence Time"] = x_df["Residence Time"].values
-
-        dfs_mean.append(traj_mean_df)
-        dfs_var.append(traj_var_df)
-
-    # Concatenate all trajectories back together
-    mean_df = pd.concat(dfs_mean, ignore_index=True)
-    var_df = pd.concat(dfs_var, ignore_index=True)
-
-    # Sort to match original order (optional)
-    mean_df = mean_df.sort_values(
-        ["SOLVENT NAME", "Temperature", "Residence Time"]
-    ).reset_index(drop=True)
-    var_df = var_df.sort_values(
-        ["SOLVENT NAME", "Temperature", "Residence Time"]
-    ).reset_index(drop=True)
-
-    mean = mean_df[[col for col in mean_df.columns if col.startswith("state_")]].values
-    var = var_df[[col for col in var_df.columns if col.startswith("state_")]].values
-
-    return mean, var
 
 
 def _normal_kl(mu1, var1, mu2, var2):
