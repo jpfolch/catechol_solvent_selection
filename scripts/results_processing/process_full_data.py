@@ -48,6 +48,7 @@ def sort_results(all_results: pd.DataFrame):
 
 
 def get_latex_table(all_results: pd.DataFrame):
+    all_results = all_results.fillna("-")
     styler = all_results.style.format(precision=3)
     return styler.to_latex(hrules=True)
 
