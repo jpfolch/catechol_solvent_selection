@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
 from catechol.data.data_labels import get_data_labels_mean_var
-from catechol.data.featurizations import featurize_input_df
+from catechol.data.featurizations import featurize_input_df, FeaturizationType
 from catechol.data.loader import generate_leave_one_out_splits, train_test_split
 
 from .base_model import Model
@@ -25,9 +25,9 @@ class MLPModel(Model):
         use_validation: str = None,
         batch_size: int = 32,
         custom_MLP=None,
-        featurization_type: str = "acs_pca_descriptors",
+        featurization: FeaturizationType | None = None,
     ):
-        super().__init__()
+        super().__init__(featurization=featurization)
 
         self.learning_rate = learning_rate
         self.dropout = dropout
@@ -35,7 +35,6 @@ class MLPModel(Model):
         self.use_validation = use_validation
         self.batch_size = batch_size
         self.custom_MLP = custom_MLP
-        self.featurization_type = featurization_type
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._set_seed()
 
@@ -93,7 +92,7 @@ class MLPModel(Model):
 
     def _prepare_training_tensors(self, X: pd.DataFrame, Y: pd.DataFrame = None):
         # Creating featurization of the solvent
-        X_input = featurize_input_df(X, self.featurization_type, remove_constant=True)
+        X_input = featurize_input_df(X, self.featurization, remove_constant=True)
 
         # Numerical features
         numerical_tensor = torch.tensor(X_input.values, dtype=torch.float32).to(
