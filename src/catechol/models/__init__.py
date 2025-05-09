@@ -3,11 +3,15 @@ from .gp import GPModel
 
 from .llm import LLMModel
 from .mlp import MLPModel
+from .ode import LODEModel, EODEModel, NODEModel
 
 ALL_MODELS = {
     "GPModel": GPModel,
     "LLMModel": LLMModel,
     "MLPModel": MLPModel,
+    "LODEModel": LODEModel, 
+    "EODEModel": EODEModel, 
+    "NODEModel": NODEModel
 }
 
 
