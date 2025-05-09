@@ -133,19 +133,18 @@ def _plot_ramp_ground_truth(
 def plot_solvent_ramp_prediction(
     model: Model, test_X: pd.DataFrame, test_Y: pd.DataFrame
 ) -> plt.Axes:
-    fig, axs = plt.subplots(ncols=2, figsize=(6, 4), sharey=True)
+    temperatures = [175, 225]
+    fig, axs = plt.subplots(ncols=len(temperatures), figsize=(6, 4), sharey=True)
     solvent_a, solvent_b = test_X[["SOLVENT A NAME", "SOLVENT B NAME"]].iloc[0]
-    _plot_ramp_model_mean_and_confidence(model, solvent_a, solvent_b, 175, axs[0])
-    _plot_ramp_model_mean_and_confidence(model, solvent_a, solvent_b, 225, axs[1])
-    _plot_ramp_ground_truth(test_X, test_Y, 175, axs[0])
-    _plot_ramp_ground_truth(test_X, test_Y, 225, axs[1])
-    for ax in axs:
+    for temperature, ax in zip(temperatures, axs):
+        _plot_ramp_model_mean_and_confidence(model, solvent_a, solvent_b, temperature, ax)
+        _plot_ramp_ground_truth(test_X, test_Y, temperature, ax)
+
         ax.legend()
         ax.set_xlabel("SolventB% / %")
         ax.set_ylim(-0.05, 1.0)
+        ax.set_title(f"T = {temperature}C")
 
-    axs[0].set_title("Temperature: 175C")
     axs[0].set_ylabel("Yield / %")
-    axs[1].set_title("Temperature: 225C")
     fig.suptitle(f"Solvents: {solvent_a} -> {solvent_b}")
     return fig

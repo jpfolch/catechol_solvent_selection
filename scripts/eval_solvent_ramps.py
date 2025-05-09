@@ -43,10 +43,13 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
     X = X[INPUT_LABELS_FULL_DATA]
 
     results = pd.DataFrame(columns=["Test solvent", "mse", "nlpd"])
+    out_dir = Path("results/full_data/")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    model_name = model.get_model_name()
 
     # this will generate all of the possible leave-one-out splits of the dataset
     split_generator = generate_leave_one_ramp_out_splits(X, Y)
-    for i, split in tqdm.tqdm(enumerate(split_generator)):
+    for i, split in tqdm.tqdm(enumerate(split_generator), total=13):
         (train_X, train_Y), (test_X, test_Y) = split
         model.train(train_X, train_Y)
 
@@ -62,6 +65,10 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
             {"Test solvent": test_solvent, "mse": mse, "nlpd": nlpd}, index=[i]
         )
         results = pd.concat((results, result))
+
+        # store the results as you go
+        results.to_csv(out_dir / f"{model_name}.csv", index=False)
+
 
     return results
 
@@ -79,7 +86,6 @@ if __name__ == "__main__":
     )
     argparser.add_argument("-m", "--model", type=str)
     argparser.add_argument("-f", "--featurization", type=str)
-    argparser.add_argument("--save-model-name", type=str, required=False)
     argparser.add_argument(
         "-c",
         "--config",
@@ -93,8 +99,3 @@ if __name__ == "__main__":
     config = args.config or {}
     results = main(args.model, args.featurization, config)
 
-    print(results)
-    out_dir = Path("results/full_data/")
-    out_dir.mkdir(parents=True, exist_ok=True)
-    save_model_name = args.save_model_name or args.model
-    results.to_csv(out_dir / f"{save_model_name}.csv", index=False)
