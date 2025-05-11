@@ -15,11 +15,13 @@ from transformers import AutoConfig, AutoModel, AutoTokenizer
 
 from catechol.data.data_labels import get_data_labels_mean_var
 from catechol.data.loader import generate_leave_one_out_splits, train_test_split
+from catechol.data.featurizations import featurize_input_df
 
 from .base_model import Model
 
 
 class LLMModel(Model):
+    extra_input_columns = ["Reaction SMILES"]
     def __init__(
         self,
         model_name: str = "seyonec/ChemBERTa-zinc-base-v1",
@@ -35,8 +37,9 @@ class LLMModel(Model):
         time_limit: float = 10800,
         use_validation: str = None,
         batch_size: int = None,
+        **kwargs,
     ):
-        super().__init__()
+        super().__init__(featurization="smiles")
         self._set_seed()
         self.model_name = model_name
         self.freeze_backbone = freeze_backbone

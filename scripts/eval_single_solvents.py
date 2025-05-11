@@ -19,7 +19,7 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
     model = get_model(model_name=model_name, featurization=featurization, **kwargs)
     X, Y = load_single_solvent_data()
     # remove unnecessary columns
-    X = X[INPUT_LABELS_SINGLE_SOLVENT]
+    X = X[INPUT_LABELS_SINGLE_SOLVENT + model.extra_input_columns]
 
     results = pd.DataFrame(columns=["Test solvent", "mse", "nlpd"])
     out_dir = Path("results/single_solvent/")
