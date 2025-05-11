@@ -24,7 +24,7 @@ class LLMModel(Model):
     extra_input_columns = ["Reaction SMILES"]
     def __init__(
         self,
-        model_name: str = "seyonec/ChemBERTa-zinc-base-v1",
+        pretrained_model_name: str = "seyonec/ChemBERTa-zinc-base-v1",
         freeze_backbone: bool = False,
         learning_rate_backbone: float = 1e-5,
         learning_rate_head: float = 1e-4,
@@ -41,7 +41,7 @@ class LLMModel(Model):
     ):
         super().__init__(featurization="smiles")
         self._set_seed()
-        self.model_name = model_name
+        self.model_name = pretrained_model_name
         self.freeze_backbone = freeze_backbone
         self.learning_rate_backbone = learning_rate_backbone
         self.learning_rate_head = learning_rate_head
