@@ -19,7 +19,12 @@ from catechol.data.loader import (
 
 from .base_model import Model
 
-featurization_dims = {"acs_pca_descriptors": 5, "drfps": 2048, "fragprints": None}
+featurization_dims = {
+    "acs_pca_descriptors": 5, 
+    "drfps": 2048, 
+    "fragprints": 2133,
+    "spange_descriptors": 13,
+}
 
 
 class LODEModel(Model):

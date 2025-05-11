@@ -1,11 +1,11 @@
 from pathlib import Path
+from catechol.data.featurizations import FEATURIZATIONS
 
 import pandas as pd
 
 OUTPUT_DIR = Path("results")
 FULL_DATA_RESULTS_DIR = Path("results/full_data")
 SINGLE_SOLVENT_RESULTS_DIR = Path("results/single_solvent")
-ALL_MODELS = ["GPModel", "MLPModel", "LLMModel"]
 
 
 def parse_model_filename(model_str: str) -> dict[str, str]:
@@ -44,8 +44,13 @@ def load_results(dir: Path):
 
 
 def filter_and_sort_results(all_results: pd.DataFrame, normalize_nlpd: bool = True):
-    def sorter(idx):
-        return idx.map({model: i for i, model in enumerate(ALL_MODELS)})
+    def sorter(idx: pd.Index):
+        sorted_order = {
+            "Model": ["BaselineModel", "GPModel", "MLPModel", "LLMModel", "LODEModel", "EODEModel", "NODEModel"],
+            "Featurization": [f.split("_")[0] for f in FEATURIZATIONS],
+            "Details": [],
+        }
+        return idx.map({model: i for i, model in enumerate(sorted_order[idx.name])})
     
     # remove all of the warps
     warp_idcs = all_results.index.get_level_values("Details").str.contains("warp")
@@ -68,7 +73,7 @@ def filter_and_sort_results(all_results: pd.DataFrame, normalize_nlpd: bool = Tr
 
     return all_results.reorder_levels(
         ["Model", "Featurization", "Details"]
-    ).sort_index()
+    ).sort_index(key=sorter, level=[0, 2])
 
 
 def get_latex_table(all_results: pd.DataFrame):
@@ -76,7 +81,11 @@ def get_latex_table(all_results: pd.DataFrame):
     # remove the labels for the header
     all_results.columns.names = [None, None]
     styler = all_results.style.format(precision=3)
-    return styler.to_latex(hrules=True)
+    return styler.to_latex(
+        hrules=True,
+        multicol_align="c",
+        multirow_align="t"
+    )
 
 
 if __name__ == "__main__":
