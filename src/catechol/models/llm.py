@@ -339,3 +339,7 @@ class LLMModel(Model):
     def _ask(self) -> pd.DataFrame:
         """Ask the model for a candidate experiment, for Bayesian optimization."""
         return self._ask()
+
+    def _get_model_name(self) -> str:
+        pretrained = "-rxnfp" if "rxnfp" in self.model_name.lower() else "-chemberta"
+        return f"{self.__class__.__name__}{pretrained}"
