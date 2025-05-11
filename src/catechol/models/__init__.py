@@ -1,4 +1,5 @@
 from .base_model import Model
+from .baseline import BaselineModel
 from .gp import GPModel
 from .llm import LLMModel
 from .mlp import MLPModel
@@ -7,6 +8,7 @@ ALL_MODELS = {
     "GPModel": GPModel,
     "LLMModel": LLMModel,
     "MLPModel": MLPModel,
+    "BaselineModel": BaselineModel,
 }
 
 
