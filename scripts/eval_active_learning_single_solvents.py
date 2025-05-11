@@ -97,11 +97,11 @@ def main(
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="Evaluate a model on the single solvent dataset.",
+        description="Evaluate active learning on the single solvents data.",
         epilog=textwrap.dedent(
             """To pass in arbitrary options, use the -c flag.
             Example usage:
-                python scripts/eval_single_solvents.py -m "GPModel" -f "drfps" -c multitask=True
+                python scripts/eval_active_learning_single_solvents.py -m "GPModel" -f "drfps" -c multitask=True
             """
         ),
     )
