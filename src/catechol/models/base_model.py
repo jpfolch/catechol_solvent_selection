@@ -47,7 +47,6 @@ class Model(ABC):
         """Ask the model for a candidate experiment, for Bayesian optimization."""
         return self._ask()
 
-    @abstractmethod
     def _ask(self) -> pd.DataFrame:
         """Abstract method to ask the model for a candidate experiment. Must be implemented by subclasses."""
         pass

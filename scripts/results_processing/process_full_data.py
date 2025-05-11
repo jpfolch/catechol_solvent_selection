@@ -10,7 +10,10 @@ ALL_MODELS = ["GPModel", "MLPModel", "LLMModel"]
 
 def parse_model_filename(model_str: str) -> dict[str, str]:
     """Parse the saved name of the results from a model."""
-    model_name, *details, featurization = model_str.split("-")
+    splits = model_str.split("-")
+    if len(splits) == 1:
+        splits = [*splits, "", ""]
+    model_name, *details, featurization = splits
     featurization = featurization.split("_")[0]
     return {
         "name": model_name,
@@ -40,7 +43,7 @@ def load_results(dir: Path):
     return pd.concat(all_results_lst)
 
 
-def filter_and_sort_results(all_results: pd.DataFrame):
+def filter_and_sort_results(all_results: pd.DataFrame, normalize_nlpd: bool = True):
     def sorter(idx):
         return idx.map({model: i for i, model in enumerate(ALL_MODELS)})
     
@@ -49,6 +52,20 @@ def filter_and_sort_results(all_results: pd.DataFrame):
     spange_idcs = all_results.index.get_level_values("Featurization") == "spange"
     all_results = all_results[(~warp_idcs) | spange_idcs]
 
+    # normalize the NLPD
+    if normalize_nlpd:
+        # difficult indexing here to make sure that we only subtract from the NLPD
+        baseline = all_results.loc["BaselineModel", "", ""]
+        baseline_nlpd = baseline[baseline.index.get_level_values("Metric").str.contains("NLPD")]
+        idx = pd.IndexSlice
+        all_results.loc[idx[:, :, :], idx[:, "NLPD ($\downarrow$)"]] -= baseline_nlpd
+        # all_results = all_results.drop(("BaselineModel", "", ""))
+
+        # rename NLPD columns to reflect that they have been normalized
+        levels = all_results.columns.get_level_values("Metric")[:2]
+        new_levels = levels.str.replace("NLPD", "SNLPD")
+        all_results.columns = all_results.columns.set_levels(new_levels, level=1)
+
     return all_results.reorder_levels(
         ["Model", "Featurization", "Details"]
     ).sort_index()
@@ -56,6 +73,8 @@ def filter_and_sort_results(all_results: pd.DataFrame):
 
 def get_latex_table(all_results: pd.DataFrame):
     all_results = all_results.fillna("-")
+    # remove the labels for the header
+    all_results.columns.names = [None, None]
     styler = all_results.style.format(precision=3)
     return styler.to_latex(hrules=True)
 
@@ -69,7 +88,8 @@ if __name__ == "__main__":
             "Full data": full_data_results,
             "Single solvent": single_solvent_results,
         },
-        axis="columns"
+        axis="columns",
+        names=["Dataset", "Metric"]
     )
     all_results = filter_and_sort_results(all_results)
     # print(all_results)
