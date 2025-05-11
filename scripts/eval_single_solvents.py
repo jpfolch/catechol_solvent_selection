@@ -2,6 +2,7 @@ import argparse
 import textwrap
 
 import pandas as pd
+from pathlib import Path
 import tqdm
 from catechol import metrics
 from catechol.data.data_labels import INPUT_LABELS_SINGLE_SOLVENT
@@ -12,36 +13,18 @@ from catechol.data.loader import (
     replace_repeated_measurements_with_average,
 )
 from catechol.models import get_model
-
-
-class StoreDict(argparse.Action):
-    """Custom action to support passing kwargs.
-
-    https://stackoverflow.com/a/11762020"""
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        # Create or retrieve an existing dictionary from the namespace.
-        kwargs_dict = {}
-        # Allow values to be passed as a list (supporting multiple key-value pairs)
-        for value in values:
-            try:
-                key, _, val = value.partition("=")
-                if val.lower() in ["true", "false"]:
-                    val = val.lower() == "true"
-            except ValueError:
-                message = f"Value '{value}' is not in key=value format"
-                raise argparse.ArgumentError(self, message)
-            kwargs_dict[key] = val
-        setattr(namespace, self.dest, kwargs_dict)
-
+from catechol.script_utils import StoreDict
 
 def main(model_name: str, featurization: FeaturizationType, kwargs):
     model = get_model(model_name=model_name, featurization=featurization, **kwargs)
     X, Y = load_single_solvent_data()
     # remove unnecessary columns
-    X = X[INPUT_LABELS_SINGLE_SOLVENT]
+    X = X[INPUT_LABELS_SINGLE_SOLVENT + model.extra_input_columns]
 
     results = pd.DataFrame(columns=["Test solvent", "mse", "nlpd"])
+    out_dir = Path("results/single_solvent/")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    model_name = model.get_model_name()
 
     # this will generate all of the possible leave-one-out splits of the dataset
     split_generator = generate_leave_one_out_splits(X, Y)
@@ -61,6 +44,10 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
             {"Test solvent": test_solvent, "mse": mse, "nlpd": nlpd}, index=[i]
         )
         results = pd.concat((results, result))
+
+        # store the results as you go
+        results.to_csv(out_dir / f"{model_name}.csv", index=False)
+
 
     return results
 

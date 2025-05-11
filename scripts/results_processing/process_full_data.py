@@ -2,7 +2,9 @@ from pathlib import Path
 
 import pandas as pd
 
-RESULTS_DIR = Path("results/full_data")
+OUTPUT_DIR = Path("results")
+FULL_DATA_RESULTS_DIR = Path("results/full_data")
+SINGLE_SOLVENT_RESULTS_DIR = Path("results/single_solvent")
 ALL_MODELS = ["GPModel", "MLPModel", "LLMModel"]
 
 
@@ -17,9 +19,9 @@ def parse_model_filename(model_str: str) -> dict[str, str]:
     }
 
 
-def load_results():
+def load_results(dir: Path):
     all_results_lst = []
-    for result_path in RESULTS_DIR.iterdir():
+    for result_path in dir.iterdir():
         model_idx = parse_model_filename(result_path.stem)
         result_df_full = pd.read_csv(result_path)
 
@@ -38,9 +40,14 @@ def load_results():
     return pd.concat(all_results_lst)
 
 
-def sort_results(all_results: pd.DataFrame):
+def filter_and_sort_results(all_results: pd.DataFrame):
     def sorter(idx):
         return idx.map({model: i for i, model in enumerate(ALL_MODELS)})
+    
+    # remove all of the warps
+    warp_idcs = all_results.index.get_level_values("Details").str.contains("warp")
+    spange_idcs = all_results.index.get_level_values("Featurization") == "spange"
+    all_results = all_results[(~warp_idcs) | spange_idcs]
 
     return all_results.reorder_levels(
         ["Model", "Featurization", "Details"]
@@ -48,14 +55,26 @@ def sort_results(all_results: pd.DataFrame):
 
 
 def get_latex_table(all_results: pd.DataFrame):
+    all_results = all_results.fillna("-")
     styler = all_results.style.format(precision=3)
     return styler.to_latex(hrules=True)
 
 
 if __name__ == "__main__":
-    all_results = load_results()
-    all_results = sort_results(all_results)
-    print(get_latex_table(all_results))
+    full_data_results = load_results(FULL_DATA_RESULTS_DIR)
+    single_solvent_results = load_results(SINGLE_SOLVENT_RESULTS_DIR)
+
+    all_results = pd.concat(
+        {
+            "Full data": full_data_results,
+            "Single solvent": single_solvent_results,
+        },
+        axis="columns"
+    )
+    all_results = filter_and_sort_results(all_results)
+    # print(all_results)
+    with open(OUTPUT_DIR / "regression.tex", "w") as f:
+        f.write(get_latex_table(all_results))
 
     # indep = all_results.index.get_level_values("Details").str.contains("indep")
     # print(indep)

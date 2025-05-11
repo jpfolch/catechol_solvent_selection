@@ -15,14 +15,16 @@ from transformers import AutoConfig, AutoModel, AutoTokenizer
 
 from catechol.data.data_labels import get_data_labels_mean_var
 from catechol.data.loader import generate_leave_one_out_splits, train_test_split
+from catechol.data.featurizations import featurize_input_df
 
 from .base_model import Model
 
 
 class LLMModel(Model):
+    extra_input_columns = ["Reaction SMILES"]
     def __init__(
         self,
-        model_name: str = "seyonec/ChemBERTa-zinc-base-v1",
+        pretrained_model_name: str = "seyonec/ChemBERTa-zinc-base-v1",
         freeze_backbone: bool = False,
         learning_rate_backbone: float = 1e-5,
         learning_rate_head: float = 1e-4,
@@ -35,10 +37,11 @@ class LLMModel(Model):
         time_limit: float = 10800,
         use_validation: str = None,
         batch_size: int = None,
+        **kwargs,
     ):
-        super().__init__()
+        super().__init__(featurization="smiles")
         self._set_seed()
-        self.model_name = model_name
+        self.model_name = pretrained_model_name
         self.freeze_backbone = freeze_backbone
         self.learning_rate_backbone = learning_rate_backbone
         self.learning_rate_head = learning_rate_head
@@ -336,3 +339,7 @@ class LLMModel(Model):
     def _ask(self) -> pd.DataFrame:
         """Ask the model for a candidate experiment, for Bayesian optimization."""
         return self._ask()
+
+    def _get_model_name(self) -> str:
+        pretrained = "-rxnfp" if "rxnfp" in self.model_name.lower() else "-chemberta"
+        return f"{self.__class__.__name__}{pretrained}"

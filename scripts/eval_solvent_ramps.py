@@ -13,28 +13,7 @@ from catechol.data.loader import (
     replace_repeated_measurements_with_average,
 )
 from catechol.models import get_model
-
-
-class StoreDict(argparse.Action):
-    """Custom action to support passing kwargs.
-
-    https://stackoverflow.com/a/11762020"""
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        # Create or retrieve an existing dictionary from the namespace.
-        kwargs_dict = {}
-        # Allow values to be passed as a list (supporting multiple key-value pairs)
-        for value in values:
-            try:
-                key, _, val = value.partition("=")
-                if val.lower() in ["true", "false"]:
-                    val = val.lower() == "true"
-            except ValueError:
-                message = f"Value '{value}' is not in key=value format"
-                raise argparse.ArgumentError(self, message)
-            kwargs_dict[key] = val
-        setattr(namespace, self.dest, kwargs_dict)
-
+from catechol.script_utils import StoreDict
 
 def main(model_name: str, featurization: FeaturizationType, kwargs):
     model = get_model(model_name=model_name, featurization=featurization, **kwargs)

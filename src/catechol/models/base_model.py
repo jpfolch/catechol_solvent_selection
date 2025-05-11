@@ -10,6 +10,7 @@ class Model(ABC):
     """Base class for all models."""
 
     normalize_inputs = True
+    extra_input_columns = []
 
     def __init__(self, featurization: FeaturizationType | None = None):
         """Initialize the model."""
