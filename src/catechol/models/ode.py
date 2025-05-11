@@ -1,18 +1,25 @@
-import pandas as pd
-import os
-import torch
-from torch import nn
-import torch.optim as optim
-
 import glob
+import os
+
 import numpy as np
-from tqdm import tqdm
-from catechol import metrics
+import pandas as pd
+import torch
+import torch.optim as optim
+from torch import nn
 from torchdiffeq import odeint
+from tqdm import tqdm
+
+from catechol import metrics
 from catechol.data.data_labels import get_data_labels_mean_var
 from catechol.data.featurizations import FeaturizationType, featurize_input_df
-from catechol.data.loader import train_test_split
+from catechol.data.loader import (
+    replace_repeated_measurements_with_average,
+    train_test_split,
+)
+
 from .base_model import Model
+
+featurization_dims = {"acs_pca_descriptors": 5, "drfps": 2048, "fragprints": None}
 
 
 class LODEModel(Model):
@@ -23,8 +30,7 @@ class LODEModel(Model):
 
     def __init__(
         self,
-        device,
-        featurization_dim: int,
+        device: str = "cpu",
         state_dim: int = 3,
         latent_state_dim: int = 32,
         latent_dynamics_dim: int = 32,
@@ -34,8 +40,11 @@ class LODEModel(Model):
         h_dim_dec: int = 64,
         featurization: FeaturizationType | None = None,
         state_column_name: list[str] = ["Product 2", "Product 3", "SM"],
+        learning_rate: float = 1e-3,
+        train_epoch: int = 100,
     ):
         super().__init__(featurization=featurization)
+        featurization_dim = featurization_dims[featurization]
         self.device = device
         self.latent_state_dim = latent_state_dim
         self.func = _ODEfunc_TIV_Dynmc(
@@ -51,13 +60,15 @@ class LODEModel(Model):
             latent_state_dim, h_dim_dec, state_dim, latent_dynamics_dim
         ).to(device)
         self.output_colnames = state_column_name
+        self.learning_rate = learning_rate
+        self.train_epoch = train_epoch
 
     def _train(
         self,
         train_X: pd.DataFrame,
         train_Y: pd.DataFrame,
-        learning_rate: float,
-        train_epoch: int,
+        learning_rate: float = None,
+        train_epoch: int = None,
         use_pretrained_model: bool = False,
         train_dir: str = None,
         kl_weight: float = 1.0,
@@ -65,6 +76,13 @@ class LODEModel(Model):
         validation_fraction: float = 0.0,
         **kwargs,
     ) -> None:
+        if learning_rate is None:
+            learning_rate = self.learning_rate
+        if train_epoch is None:
+            train_epoch = self.train_epoch
+
+        # remove duplication, ensure time is strictly increasing
+        train_X, train_Y = replace_repeated_measurements_with_average(train_X, train_Y)
 
         self.func.to(self.device)
         self.l_in_rec.to(self.device)
@@ -89,9 +107,14 @@ class LODEModel(Model):
             solvent_name=train_X["SOLVENT NAME"],
         )
 
-        keys, x_batch, y_batch, mask, meta, global_time_tensor = (
-            _formulate_data_as_batch_tensor(train_X, train_Y)
-        )
+        (
+            keys,
+            x_batch,
+            y_batch,
+            mask,
+            meta,
+            global_time_tensor,
+        ) = _formulate_data_as_batch_tensor(train_X, train_Y)
         B, T, _ = x_batch.shape
         global_time = global_time_tensor.to(self.device)
 
@@ -211,9 +234,14 @@ class LODEModel(Model):
             solvent_name=test_X["SOLVENT NAME"],
         )
 
-        keys, x_batch, _, mask, meta, global_time_tensor = (
-            _formulate_data_as_batch_tensor(test_X_proc, y=None)
-        )
+        (
+            keys,
+            x_batch,
+            _,
+            mask,
+            meta,
+            global_time_tensor,
+        ) = _formulate_data_as_batch_tensor(test_X_proc, y=None)
         B, _, _ = x_batch.shape
         mask = mask.to(self.device)
         global_time = global_time_tensor.to(self.device)
@@ -277,8 +305,7 @@ class EODEModel(Model):
 
     def __init__(
         self,
-        device,
-        featurization_dim: int,
+        device: str = "cpu",
         state_dim: int = 3,
         dynamics_dim: int = 32,
         h_dim_ode: int = 64,
@@ -286,8 +313,11 @@ class EODEModel(Model):
         h_dim_dec: int = 64,
         featurization: FeaturizationType | None = None,
         state_column_name: list[str] = ["Product 2", "Product 3", "SM"],
+        learning_rate: float = 1e-3,
+        train_epoch: int = 100,
     ):
         super().__init__(featurization=featurization)
+        featurization_dim = featurization_dims[featurization]
         self.device = device
         self.latent_state_dim = state_dim
         self.func = _ODEfunc_TIV_Dynmc(state_dim, dynamics_dim, h_dim_ode).to(device)
@@ -298,13 +328,15 @@ class EODEModel(Model):
             state_dim, h_dim_dec, state_dim, dynamics_dim
         ).to(device)
         self.output_colnames = state_column_name
+        self.learning_rate = learning_rate
+        self.train_epoch = train_epoch
 
     def _train(
         self,
         train_X: pd.DataFrame,
         train_Y: pd.DataFrame,
-        learning_rate: float,
-        train_epoch: int,
+        learning_rate: float = None,
+        train_epoch: int = None,
         use_pretrained_model: bool = False,
         train_dir: str = None,
         kl_weight: float = 1.0,
@@ -312,7 +344,6 @@ class EODEModel(Model):
         validation_fraction: float = 0.0,
         **kwargs,
     ) -> None:
-
         # initialize
         self.func.to(self.device)
         self.l_d_rec.to(self.device)
@@ -323,6 +354,15 @@ class EODEModel(Model):
             + list(self.dec.parameters())
             + list(self.l_d_rec.parameters())
         )
+
+        if learning_rate is None:
+            learning_rate = self.learning_rate
+        if train_epoch is None:
+            train_epoch = self.train_epoch
+
+        # remove duplication, ensure time is strictly increasing
+        train_X, train_Y = replace_repeated_measurements_with_average(train_X, train_Y)
+
         optimizer = optim.Adam(params, lr=learning_rate)
 
         # data preprocessing: process the data to trajectories
@@ -341,9 +381,14 @@ class EODEModel(Model):
             solvent_name=train_X["SOLVENT NAME"],
         )
 
-        keys, x_batch, y_batch, mask, meta, global_time_tensor = (
-            _formulate_data_as_batch_tensor(train_X, train_Y)
-        )
+        (
+            keys,
+            x_batch,
+            y_batch,
+            mask,
+            meta,
+            global_time_tensor,
+        ) = _formulate_data_as_batch_tensor(train_X, train_Y)
         B, _, _ = x_batch.shape
         global_time = global_time_tensor.to(self.device)
 
@@ -473,7 +518,6 @@ class EODEModel(Model):
             print(f"Stored ckpt at {ckpt_path}")
 
     def _predict(self, test_X: pd.DataFrame, mc_sample_num: int = 1) -> pd.DataFrame:
-
         self.func.eval()
 
         test_X_proc = _process_featurization(
@@ -481,9 +525,14 @@ class EODEModel(Model):
             solvent_name=test_X["SOLVENT NAME"],
         )
 
-        keys, x_batch, _, mask, meta, global_time_tensor = (
-            _formulate_data_as_batch_tensor(test_X_proc, y=None)
-        )
+        (
+            keys,
+            x_batch,
+            _,
+            mask,
+            meta,
+            global_time_tensor,
+        ) = _formulate_data_as_batch_tensor(test_X_proc, y=None)
         B, _, _ = x_batch.shape
         x_batch = x_batch.to(self.device)
         mask = mask.to(self.device)
@@ -559,14 +608,16 @@ class NODEModel(Model):
 
     def __init__(
         self,
-        device,
-        featurization_dim: int,
+        device: str = "cpu",
         state_dim: int = 3,
         h_dim_ode: int = 64,
         featurization: FeaturizationType | None = None,
         state_column_name: list[str] = ["Product 2", "Product 3", "SM"],
+        learning_rate: float = 1e-3,
+        train_epoch: int = 100,
     ):
         super().__init__(featurization=featurization)
+        featurization_dim = featurization_dims[featurization]
         self.device = device
         self.state_dim = state_dim
 
@@ -574,18 +625,27 @@ class NODEModel(Model):
             device
         )
         self.output_colnames = state_column_name
+        self.learning_rate = learning_rate
+        self.train_epoch = train_epoch
 
     def _train(
         self,
         train_X: pd.DataFrame,
         train_Y: pd.DataFrame,
-        learning_rate: float,
-        train_epoch: int,
+        learning_rate: float = None,
+        train_epoch: int = None,
         use_pretrained_model: bool = False,
         train_dir: str = None,
         validation_fraction: float = 0.0,
         **kwargs,
     ) -> None:
+        if learning_rate is None:
+            learning_rate = self.learning_rate
+        if train_epoch is None:
+            train_epoch = self.train_epoch
+
+        # remove duplication, ensure time is strictly increasing
+        train_X, train_Y = replace_repeated_measurements_with_average(train_X, train_Y)
 
         # initialize
         self.func.to(self.device)
@@ -607,9 +667,14 @@ class NODEModel(Model):
             solvent_name=train_X["SOLVENT NAME"],
         )
 
-        keys, x_batch, y_batch, mask, meta, global_time_tensor = (
-            _formulate_data_as_batch_tensor(train_X, train_Y)
-        )
+        (
+            keys,
+            x_batch,
+            y_batch,
+            mask,
+            meta,
+            global_time_tensor,
+        ) = _formulate_data_as_batch_tensor(train_X, train_Y)
         B, _, _ = x_batch.shape
         global_time = global_time_tensor.to(self.device)
 
@@ -700,9 +765,14 @@ class NODEModel(Model):
             solvent_name=test_X["SOLVENT NAME"],
         )
 
-        keys, x_batch, _, mask, meta, global_time_tensor = (
-            _formulate_data_as_batch_tensor(test_X_proc, y=None)
-        )
+        (
+            keys,
+            x_batch,
+            _,
+            mask,
+            meta,
+            global_time_tensor,
+        ) = _formulate_data_as_batch_tensor(test_X_proc, y=None)
         B, _, _ = x_batch.shape
         x_batch = x_batch.to(self.device)
         mask = mask.to(self.device)
@@ -746,7 +816,6 @@ class NODEModel(Model):
 
 
 class _ODEfunc_TIV_Dynmc(nn.Module):
-
     def __init__(self, latent_dim=4, latent_dynamics_dim=4, nhidden=20):
         self.latent_dynamics_dim = latent_dynamics_dim
         super(_ODEfunc_TIV_Dynmc, self).__init__()

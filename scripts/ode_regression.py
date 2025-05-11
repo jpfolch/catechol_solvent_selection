@@ -1,4 +1,5 @@
 import os
+
 import pandas as pd
 
 os.chdir("./src")
@@ -10,12 +11,11 @@ from catechol.data.loader import (
 
 os.chdir("..")
 
-from catechol import models
-from catechol import metrics
+from catechol import metrics, models
 
 # --- Parameter grids ---
-# TODO: Adjust the learning rate 
-model_lists = ["LODEModel"] # "LODEModel", "EODEModel", 
+# TODO: Adjust the learning rate
+model_lists = ["LODEModel"]  # "LODEModel", "EODEModel",
 cfg_dicts = {
     "NODEModel": {"device": "cuda", "state_dim": 3, "h_dim_ode": 64},
     "EODEModel": {
@@ -43,7 +43,6 @@ results = []
 
 for _ODEModel in model_lists:
     for featurization_type in featurization_type_values:
-
         split_generator = generate_leave_one_out_splits(X, Y)
         mse_scores = []
         solvent_test = []
@@ -58,10 +57,11 @@ for _ODEModel in model_lists:
             # Update featureization in cfgs
 
             # Initialize model
-            Model = getattr(models, _ODEModel)(
-                **cfg_dicts[_ODEModel],
+            Model = models.get_model(
+                _ODEModel,
                 featurization=featurization_type,
                 featurization_dim=featurization_dims[featurization_type],
+                **cfg_dicts[_ODEModel],
             )
 
             # Train and evaluate
@@ -81,7 +81,7 @@ for _ODEModel in model_lists:
         avg_mse = sum(mse_scores) / len(mse_scores)
 
         results.append(
-            {   
+            {
                 "model": _ODEModel,
                 "learning_rate": learning_rate_dicts[_ODEModel],
                 "featurization": featurization_type,
