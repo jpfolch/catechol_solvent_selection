@@ -121,3 +121,38 @@ class GPModel(Model):
         multi = "-multi" if self.multitask else "-indep"
         warp = "-warp" if self.use_input_warp else ""
         return f"{self.__class__.__name__}{multi}{warp}"
+    
+    def select_next_solvent(
+            self, solvents_to_train: list[str], solvent_list: list[str], X: pd.DataFrame
+    ):
+        """
+        Select the next solvent to add to the training set. We use the mutual information criterion
+        """
+        # obtain a list of the solvents we can choose from
+        solvents_to_test = [
+            solvent for solvent in solvent_list if solvent not in solvents_to_train
+        ]
+
+        entropies = []
+        # loop over the solvents we can choose from
+        for solvent in solvents_to_test:
+            X_solvent = X[X["SOLVENT NAME"] == solvent]
+
+            X_solvent_featurized = featurize_input_df(
+                X_solvent, self.featurization, remove_constant=True, normalize_feats=True
+            )
+            if is_df_solvent_ramp_dataset(X_solvent):
+                X_solvent_featurized = self._get_mixed_solvent_representation(
+                    X_solvent_featurized
+                )
+
+            test_X_tensor = torch.from_numpy(X_solvent_featurized.to_numpy()).to(torch.float64)
+            with torch.no_grad():
+                posterior = self.model.posterior(test_X_tensor, observation_noise = True)
+                entropy = posterior.entropy().numpy()
+            
+            entropies.append(entropy)
+        
+        # return the solvent with the highest entropy
+        max_entropy_index = np.argmax(entropies)
+        return solvents_to_test[max_entropy_index]
