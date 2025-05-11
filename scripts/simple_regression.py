@@ -1,16 +1,13 @@
 import matplotlib.pyplot as plt
 from catechol import metrics
 from catechol.data.data_labels import INPUT_LABELS_SINGLE_SOLVENT
+from catechol.data.featurizations import _load_featurization_lookup
 from catechol.data.loader import (
     generate_leave_one_out_splits,
     load_single_solvent_data,
-    train_test_split,
 )
-import pandas as pd
 from catechol.models import GPModel
 from catechol.plots.plot_solvent_prediction import plot_solvent_prediction
-from catechol.plots.plot_covariance_matrix import plot_gp_covariance_matrix
-from catechol.data.featurizations import _load_featurization_lookup
 
 # model = GPModel(featurization="spange_descriptors")
 model = GPModel(multitask=True, featurization="spange_descriptors")
@@ -26,7 +23,7 @@ Y = Y.loc[has_featurization]
 
 # # remove all low-temperature solvents
 # high_temperature_mask = (X["Temperature"] == 225) | (X["Temperature"] == 175)
-high_temperature_mask = (X["Temperature"] == 225)
+high_temperature_mask = X["Temperature"] == 225
 X = X[high_temperature_mask]
 Y = Y[high_temperature_mask]
 

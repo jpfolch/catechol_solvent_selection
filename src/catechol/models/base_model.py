@@ -10,6 +10,7 @@ class Model(ABC):
     """Base class for all models."""
 
     normalize_inputs = True
+    extra_input_columns = []
 
     def __init__(self, featurization: FeaturizationType | None = None):
         """Initialize the model."""
@@ -50,3 +51,9 @@ class Model(ABC):
     def _ask(self) -> pd.DataFrame:
         """Abstract method to ask the model for a candidate experiment. Must be implemented by subclasses."""
         pass
+
+    def get_model_name(self) -> str:
+        return f"{self._get_model_name()}-{self.featurization}"
+
+    def _get_model_name(self) -> str:
+        return self.__class__.__name__
