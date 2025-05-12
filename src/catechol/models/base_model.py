@@ -56,9 +56,9 @@ class Model(ABC):
 
     def _get_model_name(self) -> str:
         return self.__class__.__name__
-    
+
     def select_next_solvent(
-            self, solvents_to_train: list[str], solvent_list: list[str], X: pd.DataFrame
+        self, solvents_to_train: list[str], solvent_list: list[str], X: pd.DataFrame
     ) -> str:
         """
         Select the next solvent to train on based on the model's predictions.

@@ -1,10 +1,9 @@
 import argparse
 import textwrap
-
-import pandas as pd
-import numpy as np
 from pathlib import Path
-import tqdm
+
+import numpy as np
+import pandas as pd
 from catechol import metrics
 from catechol.data.data_labels import INPUT_LABELS_SINGLE_SOLVENT
 from catechol.data.featurizations import FeaturizationType
@@ -16,13 +15,18 @@ from catechol.data.loader import (
 from catechol.models import get_model
 from catechol.script_utils import StoreDict
 
-def main(model_name: str, featurization: FeaturizationType, kwargs, init_set_size: int = 3):
+
+def main(
+    model_name: str, featurization: FeaturizationType, kwargs, init_set_size: int = 3
+):
     model = get_model(model_name=model_name, featurization=featurization, **kwargs)
     X, Y = load_single_solvent_data()
     # remove unnecessary columns
     X = X[INPUT_LABELS_SINGLE_SOLVENT + model.extra_input_columns]
 
-    results = pd.DataFrame(columns=["Number of solvents","mse", "nlpd", "Solvent chosen"])
+    results = pd.DataFrame(
+        columns=["Number of solvents", "mse", "nlpd", "Solvent chosen"]
+    )
     out_dir = Path("results/active_learning/")
     out_dir.mkdir(parents=True, exist_ok=True)
     model_name = model.get_model_name()
@@ -37,14 +41,26 @@ def main(model_name: str, featurization: FeaturizationType, kwargs, init_set_siz
     num_of_solvents = 0
     for solvent in initial_solvents:
         result = pd.DataFrame(
-            {"Iteration": iteration, "Number of solvents": num_of_solvents, "mse": None, "nlpd": None, "Solvent chosen": solvent}, index=[num_of_solvents]
+            {
+                "Iteration": iteration,
+                "Number of solvents": num_of_solvents,
+                "mse": None,
+                "nlpd": None,
+                "Solvent chosen": solvent,
+            },
+            index=[num_of_solvents],
         )
         results = pd.concat((results, result))
         num_of_solvents += 1
- 
+
     while len(solvents_to_train) < len(solvent_list):
         iteration += 1
-        (train_X, train_Y), (test_X, test_Y) = generate_active_learning_train_test_split(X, Y, solvents_to_train, solvent_list)
+        (
+            (train_X, train_Y),
+            (test_X, test_Y),
+        ) = generate_active_learning_train_test_split(
+            X, Y, solvents_to_train, solvent_list
+        )
         model.train(train_X, train_Y)
 
         test_X, test_Y = replace_repeated_measurements_with_average(test_X, test_Y)
@@ -59,7 +75,14 @@ def main(model_name: str, featurization: FeaturizationType, kwargs, init_set_siz
         solvents_to_train.append(next_solvent)
 
         result = pd.DataFrame(
-            {"Iteration": iteration, "Number of solvents" : len(solvents_to_train), "mse": mse, "nlpd": nlpd, "Solvent chosen": next_solvent}, index=[num_of_solvents]
+            {
+                "Iteration": iteration,
+                "Number of solvents": len(solvents_to_train),
+                "mse": mse,
+                "nlpd": nlpd,
+                "Solvent chosen": next_solvent,
+            },
+            index=[num_of_solvents],
         )
         results = pd.concat((results, result))
 
@@ -72,14 +95,13 @@ def main(model_name: str, featurization: FeaturizationType, kwargs, init_set_siz
 
 
 if __name__ == "__main__":
-
     argparser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="Evaluate a model on the single solvent dataset.",
+        description="Evaluate active learning on the single solvents data.",
         epilog=textwrap.dedent(
             """To pass in arbitrary options, use the -c flag.
             Example usage:
-                python scripts/eval_single_solvents.py -m "GPModel" -f "drfps" -c multitask=True
+                python scripts/eval_active_learning_single_solvents.py -m "GPModel" -f "drfps" -c multitask=True
             """
         ),
     )
