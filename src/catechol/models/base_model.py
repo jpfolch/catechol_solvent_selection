@@ -61,7 +61,7 @@ class Model(ABC):
         self, ramps_to_train: list[str], ramp_list: list[str], X: pd.DataFrame
     ) -> str:
         """
-        Select the next solvent to train on based on the model's predictions.
+        Select the next ramp to train on based on the model's predictions.
         This method should be implemented by subclasses.
         """
         pass
