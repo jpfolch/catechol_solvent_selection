@@ -5,11 +5,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from catechol import metrics
-from catechol.data.data_labels import INPUT_LABELS_SINGLE_SOLVENT
+from catechol.data.data_labels import INPUT_LABELS_ACTIVE_LEARNING
 from catechol.data.featurizations import FeaturizationType
 from catechol.data.loader import (
     generate_active_learning_train_test_split,
-    load_single_solvent_data,
+    load_solvent_ramp_data,
     replace_repeated_measurements_with_average,
 )
 from catechol.models import get_model
@@ -20,46 +20,46 @@ def main(
     model_name: str, featurization: FeaturizationType, kwargs, init_set_size: int = 3
 ):
     model = get_model(model_name=model_name, featurization=featurization, **kwargs)
-    X, Y = load_single_solvent_data()
+    X, Y = load_solvent_ramp_data()
     # remove unnecessary columns
-    X = X[INPUT_LABELS_SINGLE_SOLVENT + model.extra_input_columns]
+    X = X[INPUT_LABELS_ACTIVE_LEARNING + model.extra_input_columns]
 
     results = pd.DataFrame(
-        columns=["Number of solvents", "mse", "nlpd", "Solvent chosen"]
+        columns=["Number of ramps", "mse", "nlpd", "Ramp chosen"]
     )
     out_dir = Path("results/active_learning/")
     out_dir.mkdir(parents=True, exist_ok=True)
     model_name = model.get_model_name()
 
-    # get the solvent list
-    solvent_list = X["SOLVENT NAME"].unique()
+    # get the ramp list
+    ramp_list = X["RAMP NUM"].unique()
     # random initial sample
-    initial_solvents = np.random.choice(solvent_list, size=init_set_size, replace=False)
-    solvents_to_train = [solvent for solvent in initial_solvents]
+    initial_ramps = np.random.choice(ramp_list, size=init_set_size, replace=False)
+    ramps_to_train = [ramp for ramp in initial_ramps]
 
     iteration = 0
-    num_of_solvents = 0
-    for solvent in initial_solvents:
+    num_of_ramps = 0
+    for ramp in ramps_to_train:
         result = pd.DataFrame(
             {
                 "Iteration": iteration,
-                "Number of solvents": num_of_solvents,
+                "Number of ramps": num_of_ramps,
                 "mse": None,
                 "nlpd": None,
-                "Solvent chosen": solvent,
+                "Ramp chosen": ramp,
             },
-            index=[num_of_solvents],
+            index=[num_of_ramps],
         )
         results = pd.concat((results, result))
-        num_of_solvents += 1
+        num_of_ramps += 1
 
-    while len(solvents_to_train) < len(solvent_list):
+    while len(ramps_to_train) < int(len(ramp_list) * 0.3):
         iteration += 1
         (
             (train_X, train_Y),
             (test_X, test_Y),
         ) = generate_active_learning_train_test_split(
-            X, Y, solvents_to_train, solvent_list
+            X, Y, ramps_to_train
         )
         model.train(train_X, train_Y)
 
@@ -70,26 +70,26 @@ def main(
         mse = metrics.mse(predictions, test_Y)
         nlpd = metrics.nlpd(predictions, test_Y)
 
-        # select the next solvent
-        next_solvent = model.select_next_solvent(solvents_to_train, solvent_list, X)
-        solvents_to_train.append(next_solvent)
+        # select the next ramp
+        next_ramp = model.select_next_ramp(ramps_to_train, ramp_list, X)
+        ramps_to_train.append(next_ramp)
 
         result = pd.DataFrame(
             {
                 "Iteration": iteration,
-                "Number of solvents": len(solvents_to_train),
+                "Number of ramps": len(ramps_to_train),
                 "mse": mse,
                 "nlpd": nlpd,
-                "Solvent chosen": next_solvent,
+                "Ramp chosen": next_ramp,
             },
-            index=[num_of_solvents],
+            index=[num_of_ramps],
         )
         results = pd.concat((results, result))
 
         # store the results as you go
         results.to_csv(out_dir / f"{model_name}.csv", index=False)
 
-        num_of_solvents += 1
+        num_of_ramps += 1
 
     return results
 
@@ -97,11 +97,11 @@ def main(
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="Evaluate active learning on the single solvents data.",
+        description="Evaluate active learning on the full data_set.",
         epilog=textwrap.dedent(
             """To pass in arbitrary options, use the -c flag.
             Example usage:
-                python scripts/eval_active_learning_single_solvents.py -m "GPModel" -f "drfps" -c multitask=True
+                python scripts/eval_active_learning.py -m "GPModel" -f "drfps" -c multitask=True
             """
         ),
     )

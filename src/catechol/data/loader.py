@@ -123,17 +123,15 @@ def generate_leave_one_ramp_out_splits(
 def generate_active_learning_train_test_split(
     X: pd.DataFrame,
     Y: pd.DataFrame,
-    solvents_to_train: list[str],
-    all_solvents: list[str],
+    ramps_to_train: list[str],
 ) -> tuple[tuple[pd.DataFrame, pd.DataFrame], tuple[pd.DataFrame, pd.DataFrame]]:
     """Generate a train/test split for active learning.
 
     The train set will be all other solvents.
     The test set will always be the whole dataset, i.e. including the training set.
     """
-    train_idcs_mask = X["SOLVENT NAME"].isin(solvents_to_train)
-    test_idcs_mask = X["SOLVENT NAME"].isin(all_solvents)
+    train_idcs_mask = X["RAMP NUM"].isin(ramps_to_train)
     return (
         (X[train_idcs_mask], Y[train_idcs_mask]),
-        (X[test_idcs_mask], Y[test_idcs_mask]),
+        (X, Y),
     )

@@ -122,34 +122,34 @@ class GPModel(Model):
         warp = "-warp" if self.use_input_warp else ""
         return f"{self.__class__.__name__}{multi}{warp}"
 
-    def select_next_solvent(
-        self, solvents_to_train: list[str], solvent_list: list[str], X: pd.DataFrame
+    def select_next_ramp(
+        self, ramps_to_train: list[str], all_ramps: list[str], X: pd.DataFrame
     ):
         """
         Select the next solvent to add to the training set. We use the mutual information criterion
         """
         # obtain a list of the solvents we can choose from
-        solvents_to_test = [
-            solvent for solvent in solvent_list if solvent not in solvents_to_train
+        ramps_to_test = [
+            ramp for ramp in all_ramps if ramp not in ramps_to_train
         ]
 
         entropies = []
         # loop over the solvents we can choose from
-        for solvent in solvents_to_test:
-            X_solvent = X[X["SOLVENT NAME"] == solvent]
+        for ramp_num in ramps_to_test:
+            X_ramp = X[X["RAMP NUM"] == ramp_num]
 
-            X_solvent_featurized = featurize_input_df(
-                X_solvent,
+            X_ramp_featurized = featurize_input_df(
+                X_ramp,
                 self.featurization,
                 remove_constant=True,
                 normalize_feats=True,
             )
-            if is_df_solvent_ramp_dataset(X_solvent):
-                X_solvent_featurized = self._get_mixed_solvent_representation(
-                    X_solvent_featurized
+            if is_df_solvent_ramp_dataset(X_ramp):
+                X_ramp_featurized = self._get_mixed_solvent_representation(
+                    X_ramp_featurized
                 )
 
-            test_X_tensor = torch.from_numpy(X_solvent_featurized.to_numpy()).to(
+            test_X_tensor = torch.from_numpy(X_ramp_featurized.to_numpy()).to(
                 torch.float64
             )
             with torch.no_grad():
@@ -160,4 +160,4 @@ class GPModel(Model):
 
         # return the solvent with the highest entropy
         max_entropy_index = np.argmax(entropies)
-        return solvents_to_test[max_entropy_index]
+        return ramps_to_test[max_entropy_index]
