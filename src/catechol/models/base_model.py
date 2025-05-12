@@ -58,7 +58,7 @@ class Model(ABC):
         return self.__class__.__name__
 
     def select_next_ramp(
-        self, solvents_to_train: list[str], solvent_list: list[str], X: pd.DataFrame
+        self, ramps_to_train: list[str], ramp_list: list[str], X: pd.DataFrame
     ) -> str:
         """
         Select the next solvent to train on based on the model's predictions.
