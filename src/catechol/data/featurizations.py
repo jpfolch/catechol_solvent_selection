@@ -6,13 +6,14 @@ import pandas as pd
 FEAT_DIRECTORY = Path("data/featurization_look_ups")
 FEATURIZATIONS = [
     "acs_pca_descriptors",
-    "drfps",
+    "drfps_catechol",
     "fragprints",
     "spange_descriptors",
     "smiles",
+    "drfps_claisen",
 ]
 FeaturizationType = Literal[
-    "acs_pca_descriptors", "drfps", "fragprints", "spange_descriptors", "smiles"
+    "acs_pca_descriptors", "drfps_catechol", "fragprints", "spange_descriptors", "smiles", "drfps_claisen"
 ]
 
 
