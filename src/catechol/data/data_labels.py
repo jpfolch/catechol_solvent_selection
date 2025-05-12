@@ -37,6 +37,15 @@ INPUT_LABELS_FULL_DATA = [
     "SolventB%",
 ]
 
+INPUT_LABELS_ACTIVE_LEARNING = [
+    "Residence Time",
+    "Temperature",
+    "SOLVENT A NAME",
+    "SOLVENT B NAME",
+    "SolventB%",
+    "RAMP NUM"
+]
+
 TARGET_LABELS = [
     "Product 2",
     "Product 3",
