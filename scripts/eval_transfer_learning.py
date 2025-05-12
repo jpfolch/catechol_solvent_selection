@@ -1,8 +1,8 @@
 import argparse
 import textwrap
+from pathlib import Path
 
 import pandas as pd
-from pathlib import Path
 import tqdm
 from catechol import metrics
 from catechol.data.data_labels import INPUT_LABELS_FULL_DATA
@@ -16,8 +16,14 @@ from catechol.data.loader import (
 from catechol.models import get_model
 from catechol.script_utils import StoreDict
 
+
 def main(model_name: str, featurization: FeaturizationType, transfer: bool, kwargs):
-    model = get_model(model_name=model_name, featurization=featurization, transfer_learning=transfer, **kwargs)
+    model = get_model(
+        model_name=model_name,
+        featurization=featurization,
+        transfer_learning=transfer,
+        **kwargs,
+    )
     X, Y = load_solvent_ramp_data()
     X_c, Y_c = load_claisen_data()
     # remove unnecessary columns
@@ -38,8 +44,8 @@ def main(model_name: str, featurization: FeaturizationType, transfer: bool, kwar
     for i, split in tqdm.tqdm(enumerate(split_generator)):
         (train_X, train_Y), (test_X, test_Y) = split
         model.train(
-            pd.concat((train_X, X_c)) if transfer else train_X, 
-            pd.concat((train_Y, Y_c)) if transfer else train_Y
+            pd.concat((train_X, X_c)) if transfer else train_X,
+            pd.concat((train_Y, Y_c)) if transfer else train_Y,
         )
 
         test_X, test_Y = replace_repeated_measurements_with_average(test_X, test_Y)
@@ -58,7 +64,6 @@ def main(model_name: str, featurization: FeaturizationType, transfer: bool, kwar
         # store the results as you go
         results.to_csv(out_dir / f"{model_name}.csv", index=False)
 
-
     return results
 
 
@@ -69,13 +74,15 @@ if __name__ == "__main__":
         epilog=textwrap.dedent(
             """To pass in arbitrary options, use the -c flag.
             Example usage:
-                python scripts/eval_transfer_learning.py -m "GPModel" -f "drfps" -t True -c multitask=True
+                python scripts/eval_transfer_learning.py -m "GPModel" -f "drfps" -t -c multitask=True
             """
         ),
     )
     argparser.add_argument("-m", "--model", type=str)
     argparser.add_argument("-f", "--featurization", type=str)
-    argparser.add_argument("-t", "--transfer", type=bool, default=True)
+    argparser.add_argument(
+        "-t", "--transfer", action=argparse.BooleanOptionalAction, default=False
+    )
     argparser.add_argument(
         "-c",
         "--config",
