@@ -6,7 +6,7 @@ from catechol.data.data_labels import get_data_labels_mean_var
 
 def nlpd(predictions: pd.DataFrame, ground_truth: pd.DataFrame) -> float:
     """Calculate the negative log predictive density (NLPD) of the predictions."""
-    mean_labels, var_labels = get_data_labels_mean_var()
+    mean_labels, var_labels = get_data_labels_mean_var(ground_truth.columns.to_list())
     mean = predictions[mean_labels].to_numpy()
     var = predictions[var_labels].to_numpy()
 
@@ -17,7 +17,7 @@ def nlpd(predictions: pd.DataFrame, ground_truth: pd.DataFrame) -> float:
 
 def mse(predictions: pd.DataFrame, ground_truth: pd.DataFrame) -> float:
     """Calculate the mean squared error (MSE) of the predictions."""
-    mean_labels, _ = get_data_labels_mean_var()
+    mean_labels, _ = get_data_labels_mean_var(ground_truth.columns.to_list())
     mean = predictions[mean_labels].to_numpy()
     y_true = ground_truth.to_numpy()
     mse = np.mean((y_true - mean) ** 2)

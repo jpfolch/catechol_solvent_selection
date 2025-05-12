@@ -29,6 +29,7 @@ class GPModel(Model):
         self.multitask = multitask
         self.use_input_warp = use_input_warp
         self.transfer_learning = transfer_learning
+        self.target_labels = []
         if transfer_learning:
             # we use the SM column to identify the task
             self.extra_input_columns = ["SM SMILES"]
@@ -111,6 +112,8 @@ class GPModel(Model):
         mll = ExactMarginalLogLikelihood(self.model.likelihood, self.model)
         fit_gpytorch_mll(mll, optimizer_kwargs=dict(timeout_sec=30))
 
+        self.target_labels = train_Y.columns.to_list()
+
     def _predict(self, test_X: pd.DataFrame) -> pd.DataFrame:
         test_X_featurized = featurize_input_df(
             test_X, self.featurization, remove_constant=True, normalize_feats=True
@@ -132,7 +135,7 @@ class GPModel(Model):
             mean = preds.mean.cpu().numpy()
             var = preds.variance.cpu().numpy()
 
-        mean_lbl, var_lbl = get_data_labels_mean_var()
+        mean_lbl, var_lbl = get_data_labels_mean_var(self.target_labels)
         mean_df = pd.DataFrame(mean, columns=mean_lbl)
         var_df = pd.DataFrame(var, columns=var_lbl)
         return pd.concat([mean_df, var_df], axis=1)
