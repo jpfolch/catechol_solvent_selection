@@ -159,3 +159,43 @@ class GPModel(Model):
         warp = "-warp" if self.use_input_warp else ""
         transfer = "-transfer" if self.transfer_learning else ""
         return f"{self.__class__.__name__}{multi}{warp}{transfer}"
+
+    def select_next_ramp(
+        self, ramps_to_train: list[str], all_ramps: list[str], X: pd.DataFrame
+    ):
+        """
+        Select the next ramp to add to the training set. We use the entropy criterion.
+        """
+        # obtain a list of the ramps we can choose from
+        ramps_to_test = [
+            ramp for ramp in all_ramps if ramp not in ramps_to_train
+        ]
+
+        entropies = []
+        # loop over the ramps we can choose from
+        for ramp_num in ramps_to_test:
+            X_ramp = X[X["RAMP NUM"] == ramp_num]
+
+            X_ramp_featurized = featurize_input_df(
+                X_ramp,
+                self.featurization,
+                remove_constant=True,
+                normalize_feats=True,
+            )
+            if is_df_solvent_ramp_dataset(X_ramp):
+                X_ramp_featurized = self._get_mixed_solvent_representation(
+                    X_ramp_featurized
+                )
+
+            test_X_tensor = torch.from_numpy(X_ramp_featurized.to_numpy()).to(
+                torch.float64
+            )
+            with torch.no_grad():
+                posterior = self.model.posterior(test_X_tensor, observation_noise=True)
+                entropy = posterior.entropy().numpy()
+
+            entropies.append(entropy)
+
+        # return the ramp with the highest entropy
+        max_entropy_index = np.argmax(entropies)
+        return ramps_to_test[max_entropy_index]
