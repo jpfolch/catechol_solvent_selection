@@ -5,6 +5,7 @@ import pandas as pd
 OUTPUT_DIR = Path("results")
 FULL_DATA_RESULTS_DIR = Path("results/full_data")
 SINGLE_SOLVENT_RESULTS_DIR = Path("results/single_solvent")
+TRANSFER_LEARNING_RESULTS_DIR = Path("results/transfer_learning")
 ALL_MODELS = ["GPModel", "MLPModel", "LLMModel"]
 
 
@@ -43,7 +44,7 @@ def load_results(dir: Path):
     return pd.concat(all_results_lst)
 
 
-def filter_and_sort_results(all_results: pd.DataFrame, normalize_nlpd: bool = True):
+def filter_and_sort_results(all_results: pd.DataFrame, normalize_nlpd: bool = False):
     def sorter(idx):
         return idx.map({model: i for i, model in enumerate(ALL_MODELS)})
     
@@ -80,6 +81,7 @@ def get_latex_table(all_results: pd.DataFrame):
 
 
 if __name__ == "__main__":
+    # Table: regression
     full_data_results = load_results(FULL_DATA_RESULTS_DIR)
     single_solvent_results = load_results(SINGLE_SOLVENT_RESULTS_DIR)
 
@@ -91,10 +93,21 @@ if __name__ == "__main__":
         axis="columns",
         names=["Dataset", "Metric"]
     )
-    all_results = filter_and_sort_results(all_results)
-    # print(all_results)
+    all_results = filter_and_sort_results(all_results, normalize_nlpd=True)
     with open(OUTPUT_DIR / "regression.tex", "w") as f:
         f.write(get_latex_table(all_results))
 
-    # indep = all_results.index.get_level_values("Details").str.contains("indep")
-    # print(indep)
+    # Table: transfer learning
+    tl_results = load_results(TRANSFER_LEARNING_RESULTS_DIR)
+    transfer_idcs = tl_results.index.get_level_values("Details").str.contains("transfer")
+    tl_results = pd.concat(
+        {
+            "Catechol": tl_results.loc[~transfer_idcs],
+            "Catechol + Claisen": tl_results.loc[transfer_idcs].rename(index=lambda s: s.replace("-transfer", "")),
+        },
+        axis="columns",
+        names=["Dataset", "Metric"]
+    )
+    tl_results = filter_and_sort_results(tl_results, normalize_nlpd=False)
+    with open(OUTPUT_DIR / "transfer_learning.tex", "w") as f:
+        f.write(get_latex_table(tl_results))
