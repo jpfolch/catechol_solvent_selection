@@ -17,7 +17,7 @@ from catechol.script_utils import StoreDict
 
 
 def main(
-    model_name: str, featurization: FeaturizationType, kwargs, init_set_size: int = 3
+    model_name: str, featurization: FeaturizationType, kwargs, init_set_size: int, seed: int
 ):
     model = get_model(model_name=model_name, featurization=featurization, **kwargs)
     X, Y = load_solvent_ramp_data()
@@ -34,7 +34,8 @@ def main(
     # get the ramp list
     ramp_list = X["RAMP NUM"].unique()
     # random initial sample
-    initial_ramps = np.random.choice(ramp_list, size=init_set_size, replace=False)
+    rng = np.random.default_rng(seed)
+    initial_ramps = rng.choice(ramp_list, size=init_set_size, replace=False)
     ramps_to_train = [ramp for ramp in initial_ramps]
 
     iteration = 0
@@ -107,6 +108,8 @@ if __name__ == "__main__":
     )
     argparser.add_argument("-m", "--model", type=str)
     argparser.add_argument("-f", "--featurization", type=str)
+    argparser.add_argument("-s", "--seed", type=int, default=239)
+    argparser.add_argument("-i", "--initset", type=int, default=5)
     argparser.add_argument(
         "-c",
         "--config",
@@ -118,4 +121,4 @@ if __name__ == "__main__":
     args = argparser.parse_args()
     # if no config is passed, create an empty dictionary
     config = args.config or {}
-    results = main(args.model, args.featurization, config)
+    results = main(args.model, args.featurization, config, args.initset, args.seed)
