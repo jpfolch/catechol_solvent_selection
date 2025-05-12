@@ -14,6 +14,10 @@ def parse_model_filename(model_str: str) -> dict[str, str]:
     splits = model_str.split("-")
     if len(splits) == 1:
         splits = [*splits, "", ""]
+    elif len(splits) == 2 and splits[-1] == "transfer":
+        # special case for when there are no featurizations, but the detail matters
+        splits = [*splits, ""]
+
     model_name, *details, featurization = splits
     featurization = featurization.split("_")[0]
     return {

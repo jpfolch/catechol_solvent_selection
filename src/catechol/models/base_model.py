@@ -16,6 +16,7 @@ class Model(ABC):
         """Initialize the model."""
         self.is_fitted = False
         self.featurization = featurization
+        self.target_labels = []
 
     def train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
         """Train the model on the given data."""
@@ -23,6 +24,7 @@ class Model(ABC):
             train_X = normalize(train_X)
         self._train(train_X, train_Y)
         self.is_fitted = True
+        self.target_labels = train_Y.columns.to_list()
 
     @abstractmethod
     def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
