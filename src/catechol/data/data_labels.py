@@ -42,3 +42,7 @@ TARGET_LABELS = [
     "Product 3",
     "SM",
 ]
+
+TARGET_CLAISEN_LABELS = [
+    "Product"
+]
