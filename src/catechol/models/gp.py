@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import torch
 from botorch import fit_gpytorch_mll
-from botorch.models import KroneckerMultiTaskGP, SingleTaskGP
+from botorch.models import KroneckerMultiTaskGP, MultiTaskGP, SingleTaskGP
 from botorch.models.transforms.input import Warp
 from gpytorch.means import ZeroMean
 from gpytorch.mlls import ExactMarginalLogLikelihood
@@ -21,12 +21,18 @@ class GPModel(Model):
     def __init__(
         self,
         multitask: bool = False,
+        transfer_learning: bool = False,
         use_input_warp: bool = False,
         featurization: FeaturizationType | None = None,
     ):
         super().__init__(featurization=featurization)
         self.multitask = multitask
         self.use_input_warp = use_input_warp
+        self.transfer_learning = transfer_learning
+        self.target_labels = []
+        if transfer_learning:
+            # we use the SM column to identify the task
+            self.extra_input_columns = ["SM SMILES"]
 
     def _get_mixed_solvent_representation(self, X_featurized: pd.DataFrame):
         alpha = X_featurized["SolventB%"]
@@ -42,9 +48,11 @@ class GPModel(Model):
         B_feat = get_solvent_feat("B")
 
         mixed_feat = A_feat.mul(1 - alpha, axis=0) + B_feat.mul(alpha, axis=0)
+
+        any_featurized = X_featurized.columns.str.match("^(A_|B_)")
         return pd.concat(
             (
-                X_featurized[["Residence Time", "Temperature"]],
+                X_featurized.loc[:, ~any_featurized],
                 mixed_feat,
             ),
             axis="columns",
@@ -78,20 +86,42 @@ class GPModel(Model):
                 train_X_featurized
             )
 
+        if self.transfer_learning:
+            # encode the reaction using integers
+            # identify reaction by the starting material
+            train_X_featurized["SM SMILES"] = (
+                train_X_featurized["SM SMILES"].astype("category").cat.codes
+            )
+
         train_X_tensor = torch.tensor(
             train_X_featurized.to_numpy(), dtype=torch.float64
         )
         train_Y_tensor = torch.tensor(train_Y.to_numpy(), dtype=torch.float64)
 
-        model_cls = KroneckerMultiTaskGP if self.multitask else SingleTaskGP
         warp = self._get_input_transform(train_X_featurized)
+        if self.transfer_learning:
+            # we use an MTGP since only one experiment is observed for each X
+            task_feature = train_X_featurized.columns.get_loc("SM SMILES")
+            model = MultiTaskGP(
+                train_X_tensor,
+                train_Y_tensor,
+                task_feature=task_feature,
+                input_transform=warp,
+            )
+        else:
+            model_cls = KroneckerMultiTaskGP if self.multitask else SingleTaskGP
+            model = model_cls(
+                train_X_tensor,
+                train_Y_tensor,
+                mean_module=ZeroMean(),
+                input_transform=warp,
+            )
 
-        self.model = model_cls(
-            train_X_tensor, train_Y_tensor, mean_module=ZeroMean(), input_transform=warp
-        )
-
+        self.model = model
         mll = ExactMarginalLogLikelihood(self.model.likelihood, self.model)
         fit_gpytorch_mll(mll, optimizer_kwargs=dict(timeout_sec=30))
+
+        self.target_labels = train_Y.columns.to_list()
 
     def _predict(self, test_X: pd.DataFrame) -> pd.DataFrame:
         test_X_featurized = featurize_input_df(
@@ -102,13 +132,20 @@ class GPModel(Model):
                 test_X_featurized
             )
 
+        if self.transfer_learning:
+            # encode the reaction using integers
+            # identify reaction by the starting material
+            test_X_featurized["SM SMILES"] = (
+                test_X_featurized["SM SMILES"].astype("category").cat.codes
+            )
+
         test_X_tensor = torch.from_numpy(test_X_featurized.to_numpy()).to(torch.float64)
         with torch.no_grad():
             preds = self.model.posterior(test_X_tensor)
             mean = preds.mean.cpu().numpy()
             var = preds.variance.cpu().numpy()
 
-        mean_lbl, var_lbl = get_data_labels_mean_var()
+        mean_lbl, var_lbl = get_data_labels_mean_var(self.target_labels)
         mean_df = pd.DataFrame(mean, columns=mean_lbl)
         var_df = pd.DataFrame(var, columns=var_lbl)
         return pd.concat([mean_df, var_df], axis=1)
@@ -120,7 +157,8 @@ class GPModel(Model):
     def _get_model_name(self) -> str:
         multi = "-multi" if self.multitask else "-indep"
         warp = "-warp" if self.use_input_warp else ""
-        return f"{self.__class__.__name__}{multi}{warp}"
+        transfer = "-transfer" if self.transfer_learning else ""
+        return f"{self.__class__.__name__}{multi}{warp}{transfer}"
 
     def select_next_ramp(
         self, ramps_to_train: list[str], all_ramps: list[str], X: pd.DataFrame
