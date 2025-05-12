@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from catechol.data.loader import load_solvent_ramp_data
-
+import scienceplots
+plt.style.use(["science", "no-latex", "grid"])
 X, Y = load_solvent_ramp_data()
 
 yields_sm = Y["SM"] * 100
