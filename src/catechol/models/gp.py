@@ -126,15 +126,15 @@ class GPModel(Model):
         self, ramps_to_train: list[str], all_ramps: list[str], X: pd.DataFrame
     ):
         """
-        Select the next solvent to add to the training set. We use the mutual information criterion
+        Select the next ramp to add to the training set. We use the entropy criterion.
         """
-        # obtain a list of the solvents we can choose from
+        # obtain a list of the ramps we can choose from
         ramps_to_test = [
             ramp for ramp in all_ramps if ramp not in ramps_to_train
         ]
 
         entropies = []
-        # loop over the solvents we can choose from
+        # loop over the ramps we can choose from
         for ramp_num in ramps_to_test:
             X_ramp = X[X["RAMP NUM"] == ramp_num]
 
@@ -158,6 +158,6 @@ class GPModel(Model):
 
             entropies.append(entropy)
 
-        # return the solvent with the highest entropy
+        # return the ramp with the highest entropy
         max_entropy_index = np.argmax(entropies)
         return ramps_to_test[max_entropy_index]
