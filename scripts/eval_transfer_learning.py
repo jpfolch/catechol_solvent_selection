@@ -27,8 +27,8 @@ def main(model_name: str, featurization: FeaturizationType, transfer: bool, kwar
     X, Y = load_solvent_ramp_data()
     X_c, Y_c = load_claisen_data()
     # remove unnecessary columns
-    X = X[INPUT_LABELS_FULL_DATA + model.extra_input_columns]
-    X_c = X_c[INPUT_LABELS_FULL_DATA + model.extra_input_columns]
+    X = X[INPUT_LABELS_FULL_DATA + model.extra_input_columns_full]
+    X_c = X_c[INPUT_LABELS_FULL_DATA + model.extra_input_columns_full]
 
     # transform to simpler problem
     Y = Y[["Product 2", "Product 3"]].sum(axis="columns").to_frame(name="Product")

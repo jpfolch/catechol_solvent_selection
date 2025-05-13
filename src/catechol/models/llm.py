@@ -22,6 +22,7 @@ from .base_model import Model
 
 class LLMModel(Model):
     extra_input_columns = ["Reaction SMILES"]
+    extra_input_columns_full = ["Reaction SMILES A", "Reaction SMILES B"]
     def __init__(
         self,
         pretrained_model_name: str = "seyonec/ChemBERTa-zinc-base-v1",
