@@ -3,7 +3,7 @@ import pandas as pd
 import torch
 from botorch import fit_gpytorch_mll
 from botorch.models import KroneckerMultiTaskGP, MultiTaskGP, SingleTaskGP
-from botorch.models.transforms.input import Warp
+from botorch.models.transforms.input import Warp, InputTransform, ChainedInputTransform
 from gpytorch.means import ZeroMean
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from gpytorch.priors.torch_priors import LogNormalPrior
@@ -15,6 +15,45 @@ from catechol.data.data_labels import (
 from catechol.data.featurizations import FeaturizationType, featurize_input_df
 
 from .base_model import Model
+
+
+class InterpolationTransform(InputTransform):
+    """A transform that interpolates between two (sets of) values."""
+
+    def __init__(
+        self,
+        alpha_dim: int,
+        value_a_dims: list[int],
+        value_b_dims: list[int],
+        transform_on_train: bool = True,
+        transform_on_eval: bool = True,
+        transform_on_fantasize: bool = True,
+    ):
+        super().__init__()
+        if len(value_a_dims) != len(value_b_dims):
+            raise ValueError("Interpolating values must have the same number of dimensions.")
+        
+        self.alpha_dim = alpha_dim
+        self.value_a_dims = value_a_dims
+        self.value_b_dims = value_b_dims
+
+        self.transform_on_train = transform_on_train
+        self.transform_on_eval = transform_on_eval
+        self.transform_on_fantasize = transform_on_fantasize
+
+        
+    def transform(self, X: torch.Tensor) -> torch.Tensor:
+        alpha = X[..., [self.alpha_dim]]
+        A = X[..., self.value_a_dims]
+        B = X[..., self.value_b_dims]
+        interp = A * (1 - alpha) + B * alpha
+
+        dims_for_interp = [self.alpha_dim, *self.value_a_dims, *self.value_b_dims]
+        remaining_dims = [d for d in range(X.shape[-1]) if d not in dims_for_interp]
+        remaining_X = X[..., remaining_dims]
+
+        interp_X = torch.cat([remaining_X, interp], dim=-1)
+        return interp_X
 
 
 class GPModel(Model):
@@ -58,33 +97,46 @@ class GPModel(Model):
             axis="columns",
         )
 
-    def _get_input_transform(self, train_X_featurized: pd.DataFrame):
+    def _get_input_transform(self, train_X_featurized: pd.DataFrame, interpolate: bool):
         """Get the warping input transform."""
-        if not self.use_input_warp:
-            return None
+        transforms = []
+        if self.use_input_warp:
+            # We only want to warp the time and solvent mixture ratio
+            warp_col_mask = train_X_featurized.columns.isin(("Residence Time", "SolventB%"))
+            indices = np.argwhere(warp_col_mask).flatten().tolist()
+            d = train_X_featurized.shape[-1]
+            bounds = torch.tensor([[0.0] * d, [1.0] * d])
 
-        # We only want to warp the time and solvent mixture ratio
-        warp_col_mask = train_X_featurized.columns.isin(("Residence Time", "SolventB%"))
-        indices = np.argwhere(warp_col_mask).flatten().tolist()
-        d = train_X_featurized.shape[-1]
-        bounds = torch.tensor([[0.0] * d, [1.0] * d])
+            transforms.append(Warp(
+                d,
+                indices,
+                concentration0_prior=LogNormalPrior(0.0, 0.30**0.5),
+                concentration1_prior=LogNormalPrior(0.0, 0.30**0.5),
+                bounds=bounds,
+            ))
 
-        return Warp(
-            d,
-            indices,
-            concentration0_prior=LogNormalPrior(0.0, 0.30**0.5),
-            concentration1_prior=LogNormalPrior(0.0, 0.30**0.5),
-            bounds=bounds,
-        )
+        if interpolate:
+            alpha_dim = train_X_featurized.columns.get_loc("SolventB%")
+            solvent_a_dims_bool = train_X_featurized.columns.str.startswith(f"A_")
+            solvent_b_dims_bool = train_X_featurized.columns.str.startswith(f"B_")
+            solvent_a_dims = np.argwhere(solvent_a_dims_bool).flatten().tolist()
+            solvent_b_dims = np.argwhere(solvent_b_dims_bool).flatten().tolist()
+            transforms.append(InterpolationTransform(
+                alpha_dim,
+                solvent_a_dims,
+                solvent_b_dims,                
+            ))
+
+        return ChainedInputTransform(*transforms) if transforms else None
 
     def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
         train_X_featurized = featurize_input_df(
             train_X, self.featurization, remove_constant=True, normalize_feats=True
         )
-        if is_df_solvent_ramp_dataset(train_X):
-            train_X_featurized = self._get_mixed_solvent_representation(
-                train_X_featurized
-            )
+        # if is_df_solvent_ramp_dataset(train_X):
+        #     train_X_featurized = self._get_mixed_solvent_representation(
+        #         train_X_featurized
+        #     )
 
         if self.transfer_learning:
             # encode the reaction using integers
@@ -98,7 +150,9 @@ class GPModel(Model):
         )
         train_Y_tensor = torch.tensor(train_Y.to_numpy(), dtype=torch.float64)
 
-        warp = self._get_input_transform(train_X_featurized)
+        interpolate = is_df_solvent_ramp_dataset(train_X)
+        input_transform = self._get_input_transform(train_X_featurized, interpolate)
+
         if self.transfer_learning:
             # we use an MTGP since only one experiment is observed for each X
             task_feature = train_X_featurized.columns.get_loc("SM SMILES")
@@ -106,7 +160,7 @@ class GPModel(Model):
                 train_X_tensor,
                 train_Y_tensor,
                 task_feature=task_feature,
-                input_transform=warp,
+                input_transform=input_transform,
             )
         else:
             model_cls = KroneckerMultiTaskGP if self.multitask else SingleTaskGP
@@ -114,7 +168,7 @@ class GPModel(Model):
                 train_X_tensor,
                 train_Y_tensor,
                 mean_module=ZeroMean(),
-                input_transform=warp,
+                input_transform=input_transform,
             )
 
         self.model = model
@@ -127,10 +181,10 @@ class GPModel(Model):
         test_X_featurized = featurize_input_df(
             test_X, self.featurization, remove_constant=True, normalize_feats=True
         )
-        if is_df_solvent_ramp_dataset(test_X):
-            test_X_featurized = self._get_mixed_solvent_representation(
-                test_X_featurized
-            )
+        # if is_df_solvent_ramp_dataset(test_X):
+        #     test_X_featurized = self._get_mixed_solvent_representation(
+        #         test_X_featurized
+        #     )
 
         if self.transfer_learning:
             # encode the reaction using integers
