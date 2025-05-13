@@ -2,12 +2,13 @@ import numpy as np
 import pandas as pd
 import torch
 from botorch import fit_gpytorch_mll
-from botorch.models import KroneckerMultiTaskGP, MultiTaskGP, SingleTaskGP
+from botorch.models import MultiTaskGP, SingleTaskGP
 from botorch.models.transforms.input import Warp, InputTransform, ChainedInputTransform
 from gpytorch.means import ZeroMean
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from gpytorch.priors.torch_priors import LogNormalPrior
 
+from catechol.models.multitask import KroneckerMultiTaskGP
 from catechol.data.data_labels import (
     get_data_labels_mean_var,
     is_df_solvent_ramp_dataset,
@@ -109,7 +110,7 @@ class GPModel(Model):
 
             # we have to do the warps independently for each of the columns
             # https://github.com/pytorch/botorch/issues/2852
-            warp_cols = ["Residence Time", "SolventB%"]
+            warp_cols = ["Residence Time"] + ["SolventB%"] * interpolate
             transforms.update({
                 f"warp_{col}": Warp(
                 d,
