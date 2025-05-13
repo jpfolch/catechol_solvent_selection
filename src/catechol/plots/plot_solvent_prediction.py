@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from catechol.data.data_labels import TARGET_LABELS
+from catechol.data.data_labels import TARGET_LABELS, INPUT_LABELS_FULL_DATA
 from catechol.models import Model
 from catechol.plots import style
 
@@ -92,6 +92,8 @@ def _plot_ramp_model_mean_and_confidence(
     test_X["Temperature"] = temperature
     test_X["SOLVENT A NAME"] = solvent_a_name
     test_X["SOLVENT B NAME"] = solvent_b_name
+    # reorder the columns
+    test_X = test_X[INPUT_LABELS_FULL_DATA]
     predictions = model.predict(test_X)
 
     for target in TARGET_LABELS:
@@ -132,7 +134,7 @@ def _plot_ramp_ground_truth(
 
 def plot_solvent_ramp_prediction(
     model: Model, test_X: pd.DataFrame, test_Y: pd.DataFrame
-) -> plt.Axes:
+) -> tuple[plt.Figure, list[plt.Axes]]:
     temperatures = [175, 225]
     fig, axs = plt.subplots(ncols=len(temperatures), figsize=(6, 4), sharey=True)
     solvent_a, solvent_b = test_X[["SOLVENT A NAME", "SOLVENT B NAME"]].iloc[0]
@@ -143,10 +145,14 @@ def plot_solvent_ramp_prediction(
         _plot_ramp_ground_truth(test_X, test_Y, temperature, ax)
 
         ax.legend()
-        ax.set_xlabel("SolventB% / %")
-        ax.set_ylim(-0.05, 1.0)
+        ax.set_xlabel("SolventB%")
+        ax.set_ylim(-0.2, 1.2)
+        ax.set_yticks([0.0, 0.5, 1.0])
+        ax.set_yticklabels([f"{int(y * 100)}" for y in ax.get_yticks()])
+        ax.set_xlim(0.0, 1.0)
+        ax.set_xticks([0.0, 0.5, 1.0])
         ax.set_title(f"T = {temperature}C")
 
     axs[0].set_ylabel("Yield / %")
-    fig.suptitle(f"Solvents: {solvent_a} -> {solvent_b}")
-    return fig
+    fig.suptitle(f"{solvent_a} to\n{solvent_b}")
+    return fig, axs
