@@ -11,6 +11,7 @@ import matplotlib.lines as mlines
 from catechol.plots import style
 import scienceplots
 plt.style.use(["science", "grid", "no-latex"])
+plt.rcParams["font.size"] = 12
 
 
 # model = GPModel(featurization="spange_descriptors")
@@ -36,17 +37,22 @@ test_X, test_Y = replace_repeated_measurements_with_average(test_X, test_Y)
 
 fig, axs = plot_solvent_ramp_prediction(model, test_X, test_Y)
 
-fig.set_size_inches((8, 4))
+fig.set_size_inches((8, 3))
 
 # clean up the legend
 axs[0].legend().set_visible(False)
 axs[1].legend().set_visible(False)
 
 legend_lines = [
-    mlines.Line2D([], [], color=clr, label=lbl, marker="o", markeredgecolor="black", linestyle="None") for lbl, clr in style.TARGET_TO_COLOR.items()
+    mlines.Line2D([], [], color=clr, label=style.TARGET_TO_LABEL[name], marker="o", markeredgecolor="black", linestyle="None") for name, clr in style.TARGET_TO_COLOR.items()
 ] 
-fig.legend(handles=legend_lines, loc="outside lower center", ncol=4,bbox_to_anchor=(0.5, -0.08),
+fig.legend(handles=legend_lines, loc="outside lower center", ncol=4,bbox_to_anchor=(0.5, -0.15),
     frameon=True,
 )
 fig.savefig("figures/solvent_ramp_prediction.pdf", bbox_inches="tight")
+
+for _ in range(5):
+    (train_X, train_Y), (test_X, test_Y) = next(split_generator)
+
+plot_solvent_ramp_prediction(model, test_X, test_Y)
 plt.show()

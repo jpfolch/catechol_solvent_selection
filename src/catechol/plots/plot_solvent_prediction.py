@@ -154,5 +154,5 @@ def plot_solvent_ramp_prediction(
         ax.set_title(f"T = {temperature}C")
 
     axs[0].set_ylabel("Yield / %")
-    fig.suptitle(f"{solvent_a} to\n{solvent_b}")
+    fig.suptitle(f"{solvent_a} to\n{solvent_b}", y=1.05)
     return fig, axs
