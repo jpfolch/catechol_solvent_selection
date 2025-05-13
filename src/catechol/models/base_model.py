@@ -17,11 +17,11 @@ class Model(ABC):
         self.is_fitted = False
         self.featurization = featurization
 
-    def train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
+    def train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame, *args, **kwargs) -> None:
         """Train the model on the given data."""
         if self.normalize_inputs:
             train_X = normalize(train_X)
-        self._train(train_X, train_Y)
+        self._train(train_X, train_Y, *args, **kwargs)
         self.is_fitted = True
 
     @abstractmethod
@@ -56,3 +56,12 @@ class Model(ABC):
 
     def _get_model_name(self) -> str:
         return self.__class__.__name__
+
+    def select_next_ramp(
+        self, ramps_to_train: list[str], ramp_list: list[str], X: pd.DataFrame
+    ) -> str:
+        """
+        Select the next ramp to train on based on the model's predictions.
+        This method should be implemented by subclasses.
+        """
+        pass
