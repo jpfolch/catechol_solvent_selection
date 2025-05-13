@@ -27,9 +27,9 @@ def main(
     results = pd.DataFrame(
         columns=["Number of ramps", "mse", "nlpd", "Ramp chosen"]
     )
-    out_dir = Path("results/active_learning/")
-    out_dir.mkdir(parents=True, exist_ok=True)
     model_name = model.get_model_name()
+    out_dir = Path(f"results/active_learning/{model_name}/{strategy}/")
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     # get the ramp list
     ramp_list = X["RAMP NUM"].unique()
@@ -54,7 +54,7 @@ def main(
         results = pd.concat((results, result))
         num_of_ramps += 1
 
-    while len(ramps_to_train) < int(len(ramp_list) * 0.3):
+    while len(ramps_to_train) < int(len(ramp_list) * 0.5):
         iteration += 1
         (
             (train_X, train_Y),
@@ -88,13 +88,12 @@ def main(
         results = pd.concat((results, result))
 
         # store the results as you go
-        results.to_csv(out_dir / f"{model_name}/{strategy}/{seed}.csv", index=False)
+        results.to_csv(out_dir / f"{seed}.csv", index=False)
 
         num_of_ramps += 1
 
     return results
 
-main('GPModel', 'spange_descriptors', {"al_strategy": "entropy"}, 5, 239)
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(
