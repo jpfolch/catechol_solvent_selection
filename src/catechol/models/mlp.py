@@ -114,29 +114,33 @@ class MLPModel(Model):
 
 
     def _prepare_training_tensors(self, X: pd.DataFrame, Y: pd.DataFrame = None):
-        # Creating featurization of the solvent
-        X_input = featurize_input_df(X, self.featurization, remove_constant=True)
-        if is_df_solvent_ramp_dataset(X):
-            X_input = self._get_mixed_solvent_representation(X_input)
+       # Creating featurization of the solvent
+       X_input = featurize_input_df(X, self.featurization, remove_constant=True)
+       if is_df_solvent_ramp_dataset(X):
+           X_input = self._get_mixed_solvent_representation(X_input)
 
-        # Numerical features
-        numerical_tensor = torch.tensor(X_input.values, dtype=torch.float32).to(
-            self.device
-        )
+       # Numerical
+       numerical_values = X_input[["Residence Time", "Temperature"]].values
+       numerical_tensor = torch.tensor(numerical_values, dtype=torch.float32).to(self.device)
+       if self.numerical_mean is None or self.numerical_std is None:
+           self.numerical_mean = numerical_tensor.mean(dim=0, keepdim=True)
+           self.numerical_std = numerical_tensor.std(dim=0, keepdim=True)
+       numerical_tensor =  (numerical_tensor - self.numerical_mean) / self.numerical_std
+       
+       # feturizations        
+       featurization_cols = [col for col in X_input.columns if col not in ["Residence Time", "Temperature"]]
+       featurization_tensor = torch.tensor(X_input[featurization_cols].values, dtype=torch.float32).to(self.device)
+       # if self.featurization == "acs_pca_descriptors":
+       #     non_numerical_tensor = (non_numerical_tensor - non_numerical_tensor.mean(dim=0, keepdim=True)) / non_numerical_tensor.std(dim=0, keepdim=True)
+       
+       # Final input tensor: concatenate normalized numerical with the rest
+       input_tensor = torch.cat([numerical_tensor, featurization_tensor], dim=1)
+       if Y is not None:
+           targets = torch.tensor(Y.values, dtype=torch.float32).to(self.device)
+       else:
+           targets = None
 
-        if self.numerical_mean is None or self.numerical_std is None:
-            self.numerical_mean = numerical_tensor.mean(dim=0, keepdim=True)
-            self.numerical_std = numerical_tensor.std(dim=0, keepdim=True)
-
-        # if self.featurization_type == "acs_pca_descriptors":
-        #    input_tensor = self._normalize_numerical(numerical_tensor)
-        input_tensor = numerical_tensor
-        if Y is not None:
-            targets = torch.tensor(Y.values, dtype=torch.float32).to(self.device)
-        else:
-            targets = None
-
-        return input_tensor, targets
+       return input_tensor, targets
 
     def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
         val_loss = "NA"
@@ -170,7 +174,6 @@ class MLPModel(Model):
         self._init_MLP_and_optimizer(num_features)
         self.MLP.train()
 
-        # Then your training loop:
         for epoch in range(self.epochs):
             epoch_loss = 0.0
             for batch in tqdm(loader, desc=f"Epoch {epoch+1}/{self.epochs}"):
