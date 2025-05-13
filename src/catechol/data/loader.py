@@ -5,7 +5,7 @@ from typing import Any, Generator
 import numpy as np
 import pandas as pd
 
-from catechol.data.data_labels import TARGET_LABELS, TARGET_CLAISEN_LABELS
+from catechol.data.data_labels import TARGET_LABELS
 
 
 def replace_repeated_measurements_with_average(
@@ -47,16 +47,6 @@ def load_solvent_ramp_data() -> tuple[pd.DataFrame, pd.DataFrame]:
         column for column in experiments.columns if column not in TARGET_LABELS
     ]
     return experiments[input_cols], experiments[TARGET_LABELS]
-
-def load_claisen_data() -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Load the train X and Y dataframes for the claisen experiments."""
-    path = Path("data/full_data/claisen_data_clean.csv")
-    assert path.exists(), f"Experiment data does not exist at {path.absolute()}"
-    experiments = pd.read_csv(path)
-    input_cols = [
-        column for column in experiments.columns if column not in TARGET_CLAISEN_LABELS
-    ]
-    return experiments[input_cols], experiments[TARGET_CLAISEN_LABELS]
 
 
 def train_test_split(
@@ -145,3 +135,25 @@ def generate_active_learning_train_test_split(
         (X[train_idcs_mask], Y[train_idcs_mask]),
         (X, Y),
     )
+
+
+def generate_leave_one_graph_out_splits(
+    X: pd.DataFrame, Y: pd.DataFrame
+) -> Generator[
+    tuple[tuple[pd.DataFrame, pd.DataFrame], tuple[pd.DataFrame, pd.DataFrame]],
+    Any,
+    None,
+]:
+    """Generate all leave-one-out splits across the solvents' smiles.
+
+    For each split, one of the solvents' smiles will be removed from the training set to
+    make a test set.
+    """
+
+    all_solvents = X["SOLVENT SMILES"].unique()
+    for solvent_sm in sorted(all_solvents):
+        train_idcs_mask = X["SOLVENT SMILES"] != solvent_sm
+        yield (
+            (X[train_idcs_mask], Y[train_idcs_mask]),
+            (X[~train_idcs_mask], Y[~train_idcs_mask]),
+        )
