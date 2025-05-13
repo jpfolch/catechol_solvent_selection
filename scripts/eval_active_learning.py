@@ -17,9 +17,9 @@ from catechol.script_utils import StoreDict
 
 
 def main(
-    model_name: str, featurization: FeaturizationType, kwargs, init_set_size: int, seed: int
+    model_name: str, featurization: FeaturizationType, kwargs, init_set_size: int, seed: int, strategy: str
 ):
-    model = get_model(model_name=model_name, featurization=featurization, **kwargs)
+    model = get_model(model_name=model_name, featurization=featurization, al_strategy = strategy, **kwargs)
     X, Y = load_solvent_ramp_data()
     # remove unnecessary columns
     X = X[INPUT_LABELS_ACTIVE_LEARNING + model.extra_input_columns]
@@ -72,7 +72,7 @@ def main(
         nlpd = metrics.nlpd(predictions, test_Y)
 
         # select the next ramp
-        next_ramp = model.select_next_ramp(ramps_to_train, ramp_list, X, "mutual_information")
+        next_ramp = model.select_next_ramp(ramps_to_train, ramp_list, X)
         ramps_to_train.append(next_ramp)
 
         result = pd.DataFrame(
@@ -88,12 +88,13 @@ def main(
         results = pd.concat((results, result))
 
         # store the results as you go
-        results.to_csv(out_dir / f"{model_name}.csv", index=False)
+        results.to_csv(out_dir / f"{model_name}/{strategy}/{seed}.csv", index=False)
 
         num_of_ramps += 1
 
     return results
 
+main('GPModel', 'spange_descriptors', {"al_strategy": "entropy"}, 5, 239)
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(
@@ -102,7 +103,7 @@ if __name__ == "__main__":
         epilog=textwrap.dedent(
             """To pass in arbitrary options, use the -c flag.
             Example usage:
-                python scripts/eval_active_learning.py -m "GPModel" -f "drfps" -c multitask=True
+                python scripts/eval_active_learning.py -m "GPModel" -f "drfps_catechol" -c multitask=True
             """
         ),
     )
@@ -110,6 +111,7 @@ if __name__ == "__main__":
     argparser.add_argument("-f", "--featurization", type=str)
     argparser.add_argument("-s", "--seed", type=int, default=239)
     argparser.add_argument("-i", "--initset", type=int, default=5)
+    argparser.add_argument("-st", "--strategy", type=str, default="mutual_information")
     argparser.add_argument(
         "-c",
         "--config",
@@ -121,4 +123,4 @@ if __name__ == "__main__":
     args = argparser.parse_args()
     # if no config is passed, create an empty dictionary
     config = args.config or {}
-    results = main(args.model, args.featurization, config, args.initset, args.seed)
+    results = main(args.model, args.featurization, config, args.initset, args.seed, args.strategy)

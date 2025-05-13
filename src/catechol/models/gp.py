@@ -25,11 +25,13 @@ class GPModel(Model):
         transfer_learning: bool = False,
         use_input_warp: bool = False,
         featurization: FeaturizationType | None = None,
+        al_strategy: str = "mutual_information",
     ):
         super().__init__(featurization=featurization)
         self.multitask = multitask
         self.use_input_warp = use_input_warp
         self.transfer_learning = transfer_learning
+        self.active_learning_strategy = al_strategy
         self.target_labels = []
         if transfer_learning:
             # we use the SM column to identify the task
@@ -162,8 +164,7 @@ class GPModel(Model):
         return f"{self.__class__.__name__}{multi}{warp}{transfer}"
 
     def select_next_ramp(
-        self, ramps_to_train: list[str], all_ramps: list[str], X: pd.DataFrame, criterion: str = "entropy"
-    ):
+        self, ramps_to_train: list[int], all_ramps: list[int], X: pd.DataFrame):
         """
         Select the next ramp to add to the training set. We use the entropy criterion.
         """
@@ -172,15 +173,15 @@ class GPModel(Model):
             ramp for ramp in all_ramps if ramp not in ramps_to_train
         ]
 
-        if criterion == "entropy":
+        if self.active_learning_strategy == "entropy":
             return self._select_next_ramp_entropy(X, ramps_to_test, all_ramps)
 
-        elif criterion == "random":
+        elif self.active_learning_strategy == "random":
             # randomly select a ramp
             rng = np.random.default_rng()
             return rng.choice(ramps_to_test)
 
-        elif criterion == "mutual_information":
+        elif self.active_learning_strategy == "mutual_information":
             return self._select_next_ramp_mutual_information(X, ramps_to_test, all_ramps)
     
 
@@ -289,3 +290,4 @@ class GPModel(Model):
         # return the ramp with the highest mutual information
         max_mutual_info_index = np.argmax(mutual_infos)
         return ramps_to_test[max_mutual_info_index]
+
