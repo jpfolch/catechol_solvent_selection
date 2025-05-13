@@ -99,21 +99,25 @@ class GPModel(Model):
 
     def _get_input_transform(self, train_X_featurized: pd.DataFrame, interpolate: bool):
         """Get the warping input transform."""
-        transforms = []
+        transforms = {}
         if self.use_input_warp:
             # We only want to warp the time and solvent mixture ratio
-            warp_col_mask = train_X_featurized.columns.isin(("Residence Time", "SolventB%"))
-            indices = np.argwhere(warp_col_mask).flatten().tolist()
+            # warp_col_mask = train_X_featurized.columns.isin(("Residence Time", "SolventB%"))
+            # indices = np.argwhere(warp_col_mask).flatten().tolist()
             d = train_X_featurized.shape[-1]
             bounds = torch.tensor([[0.0] * d, [1.0] * d])
 
-            transforms.append(Warp(
+            # we have to do the warps independently for each of the columns
+            # https://github.com/pytorch/botorch/issues/2852
+            warp_cols = ["Residence Time", "SolventB%"]
+            transforms.update({
+                f"warp_{col}": Warp(
                 d,
-                indices,
+                [train_X_featurized.columns.get_loc(col)],
                 concentration0_prior=LogNormalPrior(0.0, 0.30**0.5),
                 concentration1_prior=LogNormalPrior(0.0, 0.30**0.5),
                 bounds=bounds,
-            ))
+            ) for col in warp_cols})
 
         if interpolate:
             alpha_dim = train_X_featurized.columns.get_loc("SolventB%")
@@ -121,22 +125,18 @@ class GPModel(Model):
             solvent_b_dims_bool = train_X_featurized.columns.str.startswith(f"B_")
             solvent_a_dims = np.argwhere(solvent_a_dims_bool).flatten().tolist()
             solvent_b_dims = np.argwhere(solvent_b_dims_bool).flatten().tolist()
-            transforms.append(InterpolationTransform(
+            transforms["interp"]  = InterpolationTransform(
                 alpha_dim,
                 solvent_a_dims,
                 solvent_b_dims,                
-            ))
+            )
 
-        return ChainedInputTransform(*transforms) if transforms else None
+        return ChainedInputTransform(**transforms) if transforms else None
 
     def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
         train_X_featurized = featurize_input_df(
             train_X, self.featurization, remove_constant=True, normalize_feats=True
         )
-        # if is_df_solvent_ramp_dataset(train_X):
-        #     train_X_featurized = self._get_mixed_solvent_representation(
-        #         train_X_featurized
-        #     )
 
         if self.transfer_learning:
             # encode the reaction using integers
@@ -181,11 +181,7 @@ class GPModel(Model):
         test_X_featurized = featurize_input_df(
             test_X, self.featurization, remove_constant=True, normalize_feats=True
         )
-        # if is_df_solvent_ramp_dataset(test_X):
-        #     test_X_featurized = self._get_mixed_solvent_representation(
-        #         test_X_featurized
-        #     )
-
+        
         if self.transfer_learning:
             # encode the reaction using integers
             # identify reaction by the starting material
@@ -236,10 +232,6 @@ class GPModel(Model):
                 remove_constant=True,
                 normalize_feats=True,
             )
-            if is_df_solvent_ramp_dataset(X_ramp):
-                X_ramp_featurized = self._get_mixed_solvent_representation(
-                    X_ramp_featurized
-                )
 
             test_X_tensor = torch.from_numpy(X_ramp_featurized.to_numpy()).to(
                 torch.float64
