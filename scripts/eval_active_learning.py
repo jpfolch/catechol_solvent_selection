@@ -72,7 +72,7 @@ def main(
         nlpd = metrics.nlpd(predictions, test_Y)
 
         # select the next ramp
-        next_ramp = model.select_next_ramp(ramps_to_train, ramp_list, X)
+        next_ramp = model.select_next_ramp(ramps_to_train, ramp_list, X, "mutual_information")
         ramps_to_train.append(next_ramp)
 
         result = pd.DataFrame(
