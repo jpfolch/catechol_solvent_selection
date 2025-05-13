@@ -15,7 +15,7 @@ from transformers import AutoConfig, AutoModel, AutoTokenizer
 
 from catechol.data.data_labels import get_data_labels_mean_var
 from catechol.data.loader import generate_leave_one_out_splits, train_test_split
-from catechol.data.featurizations import featurize_input_df
+
 
 from .base_model import Model
 
@@ -67,10 +67,11 @@ class LLMModel(Model):
         self.val_losses = []
         self.optimizer = None
         self.loss_fn = None
+        self.is_mixture = False
 
-        # Set up backbone, tokenizer, head, optimizer
+        # Set up backbone, tokenizer
         self._init_backbone_and_tokenizer()
-        self._init_head_and_optimizer()
+        
 
     def _set_seed(self, seed: int = 42):
         random.seed(seed)
@@ -120,15 +121,24 @@ class LLMModel(Model):
             3, 2, self.dropout_head
         ).to(self.device)
         self.loss_fn = nn.MSELoss()
-        self.optimizer = torch.optim.Adam(
-            [
+        param_groups = [
+            {
+                "params": self.backbone.parameters(),
+                "lr": self.learning_rate_backbone,
+            },
+            {
+                "params": self.head.parameters(),
+                "lr": self.learning_rate_head,
+            },
+        ]
+        if self.is_mixture:    
+            param_groups.append(
                 {
-                    "params": self.backbone.parameters(),
-                    "lr": self.learning_rate_backbone,
-                },
-                {"params": self.head.parameters(), "lr": self.learning_rate_head},
-            ]
-        )
+                    "params": [self.sigmoid_a, self.sigmoid_b],
+                    "lr": self.learning_rate_head,  # Or a separate learning rate if you want
+                }
+            )
+        self.optimizer = torch.optim.Adam(param_groups)
 
     def _build_default_head(
         self, output_size: int, num_extra_features: int, dropout_rate: float
@@ -208,10 +218,10 @@ class LLMModel(Model):
             smiles_a = X["Reaction SMILES A"].tolist()
             smiles_b = X["Reaction SMILES B"].tolist()
             pct_b = torch.tensor(X["SolventB%"].values, dtype=torch.float32).unsqueeze(1).to(self.device)           
-            is_mixture = True
+            self.is_mixture = True
         else:
             smiles = X["Reaction SMILES"].tolist()            
-            is_mixture = False
+            self.is_mixture = False
             
         numerical_values = X[["Residence Time", "Temperature"]].values
         numerical_tensor = torch.tensor(numerical_values, dtype=torch.float32).to(self.device)
@@ -227,7 +237,7 @@ class LLMModel(Model):
         else:
             targets = None
 
-        if is_mixture:
+        if self.is_mixture:
             ids_a, mask_a = self.tokenize_smiles(smiles_a)
             ids_b, mask_b = self.tokenize_smiles(smiles_b)
             return (
@@ -253,8 +263,7 @@ class LLMModel(Model):
         else:
             train_X_split, train_Y_split = train_X, train_Y
 
-        self.head.train()
-        self.backbone.train()
+        
 
         # Training set prep
         if not self.batch_size:
@@ -270,7 +279,10 @@ class LLMModel(Model):
             *val_inputs, val_targets = val_tensors
             best_val_loss = float("inf")
             best_head_state, best_backbone_state = None, None
-
+            
+        self._init_head_and_optimizer()
+        self.head.train()
+        self.backbone.train()
         # Then your training loop:
         start_time = time.time()
         for epoch in range(self.epochs):
