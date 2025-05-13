@@ -44,7 +44,7 @@ for dropout in dropout_values:
                     epochs=200,
                     # use_validation=use_validation,
                     batch_size=32,
-                    featurization_type=featurization_type,
+                    featurization=featurization_type,
                 )
 
                 # Train and evaluate
