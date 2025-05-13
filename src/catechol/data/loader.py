@@ -5,7 +5,7 @@ from typing import Any, Generator
 import numpy as np
 import pandas as pd
 
-from catechol.data.data_labels import TARGET_LABELS
+from catechol.data.data_labels import TARGET_LABELS, TARGET_CLAISEN_LABELS
 
 
 def replace_repeated_measurements_with_average(
@@ -47,6 +47,16 @@ def load_solvent_ramp_data() -> tuple[pd.DataFrame, pd.DataFrame]:
         column for column in experiments.columns if column not in TARGET_LABELS
     ]
     return experiments[input_cols], experiments[TARGET_LABELS]
+
+def load_claisen_data() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Load the train X and Y dataframes for the claisen experiments."""
+    path = Path("data/full_data/claisen_data_clean.csv")
+    assert path.exists(), f"Experiment data does not exist at {path.absolute()}"
+    experiments = pd.read_csv(path)
+    input_cols = [
+        column for column in experiments.columns if column not in TARGET_CLAISEN_LABELS
+    ]
+    return experiments[input_cols], experiments[TARGET_CLAISEN_LABELS]
 
 
 def train_test_split(
@@ -118,3 +128,20 @@ def generate_leave_one_ramp_out_splits(
             (X[train_idcs_mask], Y[train_idcs_mask]),
             (X[~train_idcs_mask], Y[~train_idcs_mask]),
         )
+
+
+def generate_active_learning_train_test_split(
+    X: pd.DataFrame,
+    Y: pd.DataFrame,
+    ramps_to_train: list[str],
+) -> tuple[tuple[pd.DataFrame, pd.DataFrame], tuple[pd.DataFrame, pd.DataFrame]]:
+    """Generate a train/test split for active learning.
+
+    The train set will be all other solvents.
+    The test set will always be the whole dataset, i.e. including the training set.
+    """
+    train_idcs_mask = X["RAMP NUM"].isin(ramps_to_train)
+    return (
+        (X[train_idcs_mask], Y[train_idcs_mask]),
+        (X, Y),
+    )
