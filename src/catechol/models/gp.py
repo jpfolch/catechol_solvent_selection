@@ -191,7 +191,7 @@ class GPModel(Model):
 
         test_X_tensor = torch.from_numpy(test_X_featurized.to_numpy()).to(torch.float64)
         with torch.no_grad():
-            preds = self.model.posterior(test_X_tensor)
+            preds = self.model.posterior(test_X_tensor, observation_noise=True)
             mean = preds.mean.cpu().numpy()
             var = preds.variance.cpu().numpy()
 
