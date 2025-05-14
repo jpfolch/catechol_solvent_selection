@@ -80,6 +80,6 @@ ax.tick_params(axis='both', which='minor', labelsize=16)
 ax.legend(fontsize=16)
 
 # save the figure
-fig.savefig("figures/active_learning.png", dpi=300, bbox_inches="tight")
+fig.savefig("figures/active_learning.pdf", dpi=300, bbox_inches="tight")
 
 plt.show()
