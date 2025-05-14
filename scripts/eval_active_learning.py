@@ -54,7 +54,7 @@ def main(
         results = pd.concat((results, result))
         num_of_ramps += 1
 
-    while len(ramps_to_train) < int(len(ramp_list) * 0.5):
+    while len(ramps_to_train) < int(len(ramp_list)):
         iteration += 1
         (
             (train_X, train_Y),
