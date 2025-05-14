@@ -256,7 +256,6 @@ class LLMModel(Model):
             best_val_loss = float("inf")
             best_head_state, best_backbone_state = None, None
 
-        # Then your training loop:
         start_time = time.time()
         for epoch in range(self.epochs):
             epoch_loss = 0.0

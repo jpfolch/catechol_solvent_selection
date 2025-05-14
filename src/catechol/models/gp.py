@@ -160,8 +160,8 @@ class GPModel(Model):
     def _get_model_name(self) -> str:
         multi = "-multi" if self.multitask else "-indep"
         warp = "-warp" if self.use_input_warp else ""
-        transfer = "-transfer" if self.transfer_learning else ""
-        return f"{self.__class__.__name__}{multi}{warp}{transfer}"
+        # transfer = "-transfer" if self.transfer_learning else ""
+        return f"{self.__class__.__name__}{multi}{warp}"
 
     def select_next_ramp(
         self, ramps_to_train: list[int], all_ramps: list[int], X: pd.DataFrame):

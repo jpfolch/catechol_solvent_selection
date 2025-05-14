@@ -40,6 +40,10 @@ def main(model_name: str, featurization: FeaturizationType, transfer: bool, kwar
     model_name = model.get_model_name()
     if transfer and model_name == "BaselineModel":
         model_name = f"{model_name}-transfer"
+    elif transfer:
+        model_name_parts = model_name.split("-")
+        model_name_parts.insert(-1, "transfer")
+        model_name = "-".join(model_name_parts)
 
 
     # this will generate all of the possible leave-one-out splits of the dataset
