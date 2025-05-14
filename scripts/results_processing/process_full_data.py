@@ -15,6 +15,10 @@ def parse_model_filename(model_str: str) -> dict[str, str]:
     splits = model_str.split("-")
     if len(splits) == 1:
         splits = [*splits, "", ""]
+    elif len(splits) == 2 and splits[-1] == "transfer":
+        # special case for when there are no featurizations, but the detail matters
+        splits = [*splits, ""]
+
     model_name, *details, featurization = splits
     featurization = featurization.split("_")[0]
     return {
@@ -110,10 +114,11 @@ if __name__ == "__main__":
     # Table: transfer learning
     tl_results = load_results(TRANSFER_LEARNING_RESULTS_DIR)
     transfer_idcs = tl_results.index.get_level_values("Details").str.contains("transfer")
+    clean_transfer_fn = lambda s: s.replace("-transfer", "").replace("transfer", "")
     tl_results = pd.concat(
         {
             "Catechol": tl_results.loc[~transfer_idcs],
-            "Catechol + Claisen": tl_results.loc[transfer_idcs].rename(index=lambda s: s.replace("-transfer", "")),
+            "Catechol + Claisen": tl_results.loc[transfer_idcs].rename(index=clean_transfer_fn),
         },
         axis="columns",
         names=["Dataset", "Metric"]

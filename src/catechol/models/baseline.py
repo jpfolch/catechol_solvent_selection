@@ -33,7 +33,7 @@ class BaselineModel(Model):
 
     def _predict(self, test_X: pd.DataFrame) -> pd.DataFrame:
         N = test_X.shape[0]
-        mean_lbl, var_lbl = get_data_labels_mean_var()
+        mean_lbl, var_lbl = get_data_labels_mean_var(self.target_labels)
         mean_df = pd.DataFrame(
             np.tile(self.means, (N, 1)), index=test_X.index, columns=mean_lbl
         )

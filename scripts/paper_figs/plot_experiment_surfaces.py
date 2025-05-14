@@ -108,7 +108,7 @@ for exp in exp_nums:
 
         ax.set_box_aspect(None, zoom=0.75)
         # save the figure
-        fig.savefig(f"{directory}/{prod}/{exp}.png", dpi=300, bbox_inches="tight")
+        fig.savefig(f"{directory}/{prod}/{exp}.pdf", dpi=300, bbox_inches="tight")
 
         # show
         plt.show()
