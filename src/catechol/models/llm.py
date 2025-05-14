@@ -117,9 +117,9 @@ class LLMModel(Model):
             for param in self.backbone.parameters():
                 param.requires_grad = False
 
-    def _init_head_and_optimizer(self):
+    def _init_head_and_optimizer(self, output_size: int = 3):
         self.head = self.custom_head or self._build_default_head(
-            3, 2, self.dropout_head
+            output_size, 2, self.dropout_head
         ).to(self.device)
         self.loss_fn = nn.MSELoss()
         param_groups = [
@@ -281,7 +281,7 @@ class LLMModel(Model):
             best_val_loss = float("inf")
             best_head_state, best_backbone_state = None, None
             
-        self._init_head_and_optimizer()
+        self._init_head_and_optimizer(output_size=train_Y.shape[1])
         self.head.train()
         self.backbone.train()
         # Then your training loop:
@@ -343,7 +343,7 @@ class LLMModel(Model):
             mean = preds.cpu().numpy()
             var = torch.zeros_like(preds).cpu().numpy()
 
-        mean_lbl, var_lbl = get_data_labels_mean_var()
+        mean_lbl, var_lbl = get_data_labels_mean_var(self.target_labels)
         mean_df = pd.DataFrame(mean, columns=mean_lbl)
         var_df = pd.DataFrame(var, columns=var_lbl)
         return pd.concat([mean_df, var_df], axis=1)
