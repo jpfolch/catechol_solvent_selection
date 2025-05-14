@@ -21,7 +21,7 @@ def main(model_name: str, featurization: FeaturizationType, transfer: bool, kwar
     model = get_model(
         model_name=model_name,
         featurization=featurization,
-        transfer_learning=transfer,
+        # transfer_learning=transfer,
         **kwargs,
     )
     X, Y = load_solvent_ramp_data()
@@ -38,6 +38,9 @@ def main(model_name: str, featurization: FeaturizationType, transfer: bool, kwar
     out_dir = Path("results/transfer_learning/")
     out_dir.mkdir(parents=True, exist_ok=True)
     model_name = model.get_model_name()
+    if transfer and model_name == "BaselineModel":
+        model_name = f"{model_name}-transfer"
+
 
     # this will generate all of the possible leave-one-out splits of the dataset
     split_generator = generate_leave_one_ramp_out_splits(X, Y)
