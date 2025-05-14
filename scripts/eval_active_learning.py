@@ -17,9 +17,9 @@ from catechol.script_utils import StoreDict
 
 
 def main(
-    model_name: str, featurization: FeaturizationType, kwargs, init_set_size: int, seed: int
+    model_name: str, featurization: FeaturizationType, kwargs, init_set_size: int, seed: int, strategy: str
 ):
-    model = get_model(model_name=model_name, featurization=featurization, **kwargs)
+    model = get_model(model_name=model_name, featurization=featurization, al_strategy = strategy, **kwargs)
     X, Y = load_solvent_ramp_data()
     # remove unnecessary columns
     X = X[INPUT_LABELS_ACTIVE_LEARNING + model.extra_input_columns]
@@ -27,9 +27,9 @@ def main(
     results = pd.DataFrame(
         columns=["Number of ramps", "mse", "nlpd", "Ramp chosen"]
     )
-    out_dir = Path("results/active_learning/")
-    out_dir.mkdir(parents=True, exist_ok=True)
     model_name = model.get_model_name()
+    out_dir = Path(f"results/active_learning/{model_name}/{strategy}/")
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     # get the ramp list
     ramp_list = X["RAMP NUM"].unique()
@@ -54,7 +54,7 @@ def main(
         results = pd.concat((results, result))
         num_of_ramps += 1
 
-    while len(ramps_to_train) < int(len(ramp_list) * 0.3):
+    while len(ramps_to_train) < int(len(ramp_list)):
         iteration += 1
         (
             (train_X, train_Y),
@@ -88,7 +88,7 @@ def main(
         results = pd.concat((results, result))
 
         # store the results as you go
-        results.to_csv(out_dir / f"{model_name}.csv", index=False)
+        results.to_csv(out_dir / f"{seed}.csv", index=False)
 
         num_of_ramps += 1
 
@@ -102,7 +102,7 @@ if __name__ == "__main__":
         epilog=textwrap.dedent(
             """To pass in arbitrary options, use the -c flag.
             Example usage:
-                python scripts/eval_active_learning.py -m "GPModel" -f "drfps" -c multitask=True
+                python scripts/eval_active_learning.py -m "GPModel" -f "drfps_catechol" -c multitask=True
             """
         ),
     )
@@ -110,6 +110,7 @@ if __name__ == "__main__":
     argparser.add_argument("-f", "--featurization", type=str)
     argparser.add_argument("-s", "--seed", type=int, default=239)
     argparser.add_argument("-i", "--initset", type=int, default=5)
+    argparser.add_argument("-st", "--strategy", type=str, default="mutual_information")
     argparser.add_argument(
         "-c",
         "--config",
@@ -121,4 +122,4 @@ if __name__ == "__main__":
     args = argparser.parse_args()
     # if no config is passed, create an empty dictionary
     config = args.config or {}
-    results = main(args.model, args.featurization, config, args.initset, args.seed)
+    results = main(args.model, args.featurization, config, args.initset, args.seed, args.strategy)

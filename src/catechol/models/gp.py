@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
+import copy
 from botorch import fit_gpytorch_mll
 from botorch.models import KroneckerMultiTaskGP, MultiTaskGP, SingleTaskGP
 from botorch.models.transforms.input import Warp
@@ -24,11 +25,13 @@ class GPModel(Model):
         transfer_learning: bool = False,
         use_input_warp: bool = False,
         featurization: FeaturizationType | None = None,
+        al_strategy: str = "mutual_information",
     ):
         super().__init__(featurization=featurization)
         self.multitask = multitask
         self.use_input_warp = use_input_warp
         self.transfer_learning = transfer_learning
+        self.active_learning_strategy = al_strategy
         self.target_labels = []
         if transfer_learning:
             # we use the SM column to identify the task
@@ -161,8 +164,7 @@ class GPModel(Model):
         return f"{self.__class__.__name__}{multi}{warp}{transfer}"
 
     def select_next_ramp(
-        self, ramps_to_train: list[str], all_ramps: list[str], X: pd.DataFrame
-    ):
+        self, ramps_to_train: list[int], all_ramps: list[int], X: pd.DataFrame):
         """
         Select the next ramp to add to the training set. We use the entropy criterion.
         """
@@ -170,6 +172,20 @@ class GPModel(Model):
         ramps_to_test = [
             ramp for ramp in all_ramps if ramp not in ramps_to_train
         ]
+
+        if self.active_learning_strategy == "entropy":
+            return self._select_next_ramp_entropy(X, ramps_to_test, all_ramps)
+
+        elif self.active_learning_strategy == "random":
+            # randomly select a ramp
+            rng = np.random.default_rng()
+            return rng.choice(ramps_to_test)
+
+        elif self.active_learning_strategy == "mutual_information":
+            return self._select_next_ramp_mutual_information(X, ramps_to_test, all_ramps)
+    
+
+    def _select_next_ramp_entropy(self, X: pd.DataFrame, ramps_to_test: list[str], all_ramps: list[str]):
 
         entropies = []
         # loop over the ramps we can choose from
@@ -199,3 +215,79 @@ class GPModel(Model):
         # return the ramp with the highest entropy
         max_entropy_index = np.argmax(entropies)
         return ramps_to_test[max_entropy_index]
+
+    def _select_next_ramp_mutual_information(self, X: pd.DataFrame, ramps_to_test: list[str], all_ramps: list[str]):
+
+        mutual_infos = []
+        # loop over the ramps we can choose from
+
+        for ramp_num in ramps_to_test:
+
+            # first calculate the entropy of X_y | train_X
+            X_ramp = X[X["RAMP NUM"] == ramp_num]
+
+            X_ramp_featurized = featurize_input_df(
+                X_ramp,
+                self.featurization,
+                remove_constant=True,
+                normalize_feats=True,
+            )
+            if is_df_solvent_ramp_dataset(X_ramp):
+                X_ramp_featurized = self._get_mixed_solvent_representation(
+                    X_ramp_featurized
+                )
+
+            test_X_tensor = torch.from_numpy(X_ramp_featurized.to_numpy()).to(
+                torch.float64
+            )
+            with torch.no_grad():
+                posterior = self.model.posterior(test_X_tensor, observation_noise=True)
+                entropy_Y_given_X_train = posterior.entropy().numpy()
+
+            # now calculate the entropy of X_y | all_ramps \ ramp_num \ train_X
+
+            # create a clone of the model
+            model_clone = copy.deepcopy(self.model)
+
+            # create new training data
+            train_ramps_conjugate = [ramp for ramp in ramps_to_test if ramp != ramp_num]
+
+            X_conjugate = X[X["RAMP NUM"].isin(train_ramps_conjugate)]
+
+            X_conjugate_featurized = featurize_input_df(
+                X_conjugate,
+                self.featurization,
+                remove_constant=True,
+                normalize_feats=True,
+            )
+
+            if is_df_solvent_ramp_dataset(X_conjugate):
+                X_conjugate_featurized = self._get_mixed_solvent_representation(
+                    X_conjugate_featurized
+                )
+            train_X_tensor = torch.from_numpy(
+                X_conjugate_featurized.to_numpy()
+            ).to(torch.float64)
+
+            # create dummy Y values, since we are not using them
+            dummy_Y = torch.zeros(size = (self.model.train_inputs[0].shape[0], train_X_tensor.shape[0]), dtype=torch.float64)
+
+            # replace the models training data with the new training data
+            model_clone.train_inputs = (train_X_tensor,)
+            model_clone.train_targets = dummy_Y
+
+            # now calculate the entropy of X_y | all_ramps \ ramp_num
+            model_clone.eval()
+            with torch.no_grad():
+                posterior = model_clone.posterior(test_X_tensor, observation_noise=True)
+                entropy_Y_given_conjugate = posterior.entropy().numpy()
+            
+            # calculate the mutual information
+            mutual_info = entropy_Y_given_X_train - entropy_Y_given_conjugate
+
+            mutual_infos.append(mutual_info)
+        
+        # return the ramp with the highest mutual information
+        max_mutual_info_index = np.argmax(mutual_infos)
+        return ramps_to_test[max_mutual_info_index]
+

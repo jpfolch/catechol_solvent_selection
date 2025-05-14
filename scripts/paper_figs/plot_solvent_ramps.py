@@ -75,7 +75,7 @@ for exp in exp_nums:
         ax.legend(fontsize=16)
 
         # save the figure
-        fig.savefig(f"{directory}/225_degrees/{solvent_a}_{solvent_b}_exp_{exp}.png", dpi=300, bbox_inches="tight")
+        fig.savefig(f"{directory}/225_degrees/{solvent_a}_{solvent_b}_exp_{exp}.pdf", dpi=300, bbox_inches="tight")
 
         # show the plot
         plt.show()
@@ -133,7 +133,7 @@ for exp in exp_nums:
         ax.legend(fontsize=16)
 
         # save the figure
-        fig.savefig(f"{directory}/175_degrees/{solvent_a}_{solvent_b}_exp_{exp}.png", dpi=300, bbox_inches="tight")
+        fig.savefig(f"{directory}/175_degrees/{solvent_a}_{solvent_b}_exp_{exp}.pdf", dpi=300, bbox_inches="tight")
 
         # show the plot
         plt.show()

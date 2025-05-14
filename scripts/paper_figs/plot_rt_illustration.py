@@ -83,6 +83,6 @@ ax[2].tick_params(axis='both', which='major', labelsize=font_size)
 
 # save the figure
 plt.tight_layout()
-plt.savefig("figures/rt_illustration.png", dpi=300, bbox_inches="tight")
+plt.savefig("figures/rt_illustration.pdf", dpi=300, bbox_inches="tight")
 
 plt.show()
