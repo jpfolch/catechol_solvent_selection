@@ -52,7 +52,7 @@ def load_results(dir: Path):
 def filter_and_sort_results(all_results: pd.DataFrame, normalize_nlpd: bool = True):
     def sorter(idx: pd.Index):
         sorted_order = {
-            "Model": ["BaselineModel", "GPModel", "MLPModel", "LLMModel", "LODEModel", "EODEModel", "NODEModel"],
+            "Model": ["BaselineModel", "BaselineGPModel", "GPModel", "MLPModel", "LLMModel", "LODEModel", "EODEModel", "NODEModel"],
             "Featurization": [f.split("_")[0] for f in FEATURIZATIONS],
             "Details": [],
         }
