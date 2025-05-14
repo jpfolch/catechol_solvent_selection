@@ -28,6 +28,6 @@ plt.axvline(0, color='k', lw=1)
 
 # save the figure
 plt.tight_layout()
-plt.savefig("figures/pareto_front.png", dpi=300, bbox_inches="tight")
+plt.savefig("figures/pareto_front.pdf", dpi=300, bbox_inches="tight")
 
 plt.show()

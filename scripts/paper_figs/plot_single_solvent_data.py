@@ -73,7 +73,7 @@ for solvent in solvents:
 
         # save the plot
         plt.savefig(
-            os.path.join(directory, "225_degrees", f"{solvent}_225.png"),
+            os.path.join(directory, "225_degrees", f"{solvent}_225.pdf"),
             bbox_inches="tight",
             dpi=300,
         )
@@ -126,7 +126,7 @@ for solvent in solvents:
 
         # save the plot
         plt.savefig(
-            os.path.join(directory, "175_degrees", f"{solvent}_175.png"),
+            os.path.join(directory, "175_degrees", f"{solvent}_175.pdf"),
             bbox_inches="tight",
             dpi=300,
         )
@@ -178,7 +178,7 @@ for solvent in solvents:
 
         # save the plot
         plt.savefig(
-            os.path.join(directory, "200_degrees", f"{solvent}_200.png"),
+            os.path.join(directory, "200_degrees", f"{solvent}_200.pdf"),
             bbox_inches="tight",
             dpi=300,
         )
