@@ -192,6 +192,12 @@ class GPModel(Model):
 
         test_X_tensor = torch.from_numpy(test_X_featurized.to_numpy()).to(torch.float64)
         with torch.no_grad():
+            # we need to manually set the number of non_task_features for the MultiTaskGP
+            # because of a bug in MultiTaskGP.posterior, where it assumes the task
+            # feature is not included when the input transform changes the number of
+            # dimensions
+            if isinstance(self.model, MultiTaskGP):
+                self.model.num_non_task_features = (self.model.num_non_task_features - 1) * 2 + 1
             preds = self.model.posterior(test_X_tensor, observation_noise=True)
             mean = preds.mean.cpu().numpy()
             var = preds.variance.cpu().numpy()
