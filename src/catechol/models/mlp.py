@@ -72,8 +72,8 @@ class MLPModel(Model):
             nn.Linear(64, output_size),
         )
 
-    def _init_MLP_and_optimizer(self, num_features):
-        self.MLP = self.custom_MLP or self._build_MLP(3, num_features, self.dropout).to(
+    def _init_MLP_and_optimizer(self, num_features, output_size=3):
+        self.MLP = self.custom_MLP or self._build_MLP(output_size, num_features, self.dropout).to(
             self.device
         )
         self.loss_fn = nn.MSELoss()
@@ -216,7 +216,8 @@ class MLPModel(Model):
             num_features = int((train_inputs.shape[1]-3)/2 + 2)
         else:
             num_features = train_inputs.shape[1]
-        self._init_MLP_and_optimizer(num_features)
+        num_outputs = train_targets.shape[1]
+        self._init_MLP_and_optimizer(num_features, num_outputs)
         self.MLP.train()
 
         for epoch in range(self.epochs):
@@ -269,7 +270,7 @@ class MLPModel(Model):
             mean = preds.cpu().numpy()
             var = torch.zeros_like(preds).cpu().numpy()
 
-        mean_lbl, var_lbl = get_data_labels_mean_var()
+        mean_lbl, var_lbl = get_data_labels_mean_var(self.target_labels)
         mean_df = pd.DataFrame(mean, columns=mean_lbl)
         var_df = pd.DataFrame(var, columns=var_lbl)
         return pd.concat([mean_df, var_df], axis=1)
