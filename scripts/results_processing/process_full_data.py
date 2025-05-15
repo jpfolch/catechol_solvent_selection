@@ -58,7 +58,6 @@ def load_results(dir: Path):
     for result_path in dir.iterdir():
         model_idx = parse_model_filename(result_path.stem)
         result_df_full = pd.read_csv(result_path, index_col=0)
-        has_acetonitrile = result_df_full.index.str.contains("Acetonitrile.Acetic Acid")
         has_acetonitrile = result_df_full.index.str.contains("Acetonitrile")
         result_df_full = result_df_full.loc[~has_acetonitrile]
         data = result_df_full[["mse", "nlpd"]].mean().to_numpy().reshape(1, 2)
