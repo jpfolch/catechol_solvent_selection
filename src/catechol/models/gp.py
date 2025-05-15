@@ -8,6 +8,9 @@ from botorch.models.transforms.input import Warp, InputTransform, ChainedInputTr
 from gpytorch.means import ZeroMean
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from gpytorch.priors.torch_priors import LogNormalPrior
+from gpytorch.kernels.scale_kernel import ScaleKernel
+from botorch.models.utils.gpytorch_modules import get_covar_module_with_dim_scaled_prior
+
 
 from catechol.models.multitask import KroneckerMultiTaskGP
 from catechol.data.data_labels import (
@@ -56,6 +59,41 @@ class InterpolationTransform(InputTransform):
 
         interp_X = torch.cat([remaining_X, interp], dim=-1)
         return interp_X
+    
+def get_separated_kernel(aug_batch_shape, d: int, cont_dims: list[int]):
+    """Create a kernel that separately considers the continuous and featurized dimensions.
+    
+    This is useful for unseen solvents, where we still want to predict according
+    to the residence time/temperature.
+    """
+    cont_kernel_factory = get_covar_module_with_dim_scaled_prior
+    feat_dims = sorted(set(range(d)) - set(cont_dims))
+    sum_kernel = ScaleKernel(
+        cont_kernel_factory(
+            batch_shape=aug_batch_shape,
+            ard_num_dims=len(cont_dims),
+            active_dims=cont_dims,
+        )
+        + cont_kernel_factory(
+            batch_shape=aug_batch_shape,
+            ard_num_dims=len(feat_dims),
+            active_dims=feat_dims,
+        )
+    )
+    prod_kernel = ScaleKernel(
+        cont_kernel_factory(
+            batch_shape=aug_batch_shape,
+            ard_num_dims=len(cont_dims),
+            active_dims=cont_dims,
+        )
+        * cont_kernel_factory(
+            batch_shape=aug_batch_shape,
+            ard_num_dims=len(feat_dims),
+            active_dims=feat_dims,
+        )
+    )
+    return sum_kernel + prod_kernel
+
 
 
 class GPModel(Model):
@@ -168,10 +206,15 @@ class GPModel(Model):
             )
         else:
             model_cls = KroneckerMultiTaskGP if self.multitask else SingleTaskGP
+            _, aug_batch_shape = SingleTaskGP.get_batch_dimensions(train_X=train_X_tensor, train_Y=train_Y_tensor)
+            transformed_X = input_transform.transform(train_X_tensor) if input_transform else train_X_tensor
+            d = transformed_X.shape[-1]
+            covar_module = get_separated_kernel(aug_batch_shape, d, cont_dims=[0, 1])
             model = model_cls(
                 train_X_tensor,
                 train_Y_tensor,
                 mean_module=ZeroMean(),
+                covar_module=covar_module,
                 input_transform=input_transform,
             )
 
@@ -218,7 +261,7 @@ class GPModel(Model):
         multi = "-multi" if self.multitask else "-indep"
         warp = "-warp" if self.use_input_warp else ""
         # transfer = "-transfer" if self.transfer_learning else ""
-        return f"{self.__class__.__name__}{multi}{warp}"
+        return f"{self.__class__.__name__}{multi}{warp}-separated"
 
     def select_next_ramp(
         self, ramps_to_train: list[int], all_ramps: list[int], X: pd.DataFrame):

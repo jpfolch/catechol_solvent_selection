@@ -32,8 +32,10 @@ def load_results(dir: Path):
     all_results_lst = []
     for result_path in dir.iterdir():
         model_idx = parse_model_filename(result_path.stem)
-        result_df_full = pd.read_csv(result_path)
-
+        result_df_full = pd.read_csv(result_path, index_col=0)
+        has_acetonitrile = result_df_full.index.str.contains("Acetonitrile.Acetic Acid")
+        has_acetonitrile = result_df_full.index.str.contains("Acetonitrile")
+        result_df_full = result_df_full.loc[~has_acetonitrile]
         data = result_df_full[["mse", "nlpd"]].mean().to_numpy().reshape(1, 2)
         result_df = pd.DataFrame(
             data=data,
@@ -63,14 +65,17 @@ def filter_and_sort_results(all_results: pd.DataFrame, normalize_nlpd: bool = Tr
     spange_idcs = all_results.index.get_level_values("Featurization") == "spange"
     all_results = all_results[(~warp_idcs) | spange_idcs]
 
+    # remove the old baseline models
+    all_results = all_results.drop(("BaselineModel", "", ""))
+
     # normalize the NLPD
     if normalize_nlpd:
         # difficult indexing here to make sure that we only subtract from the NLPD
-        baseline = all_results.loc["BaselineModel", "", ""]
+        baseline = all_results.loc["BaselineGPModel", "", ""]
         baseline_nlpd = baseline[baseline.index.get_level_values("Metric").str.contains("NLPD")]
         idx = pd.IndexSlice
         all_results.loc[idx[:, :, :], idx[:, "NLPD ($\downarrow$)"]] -= baseline_nlpd
-        # all_results = all_results.drop(("BaselineModel", "", ""))
+        # all_results = all_results.drop(("BaselineGPModel", "", ""))
 
         # rename NLPD columns to reflect that they have been normalized
         levels = all_results.columns.get_level_values("Metric")[:2]
@@ -107,7 +112,7 @@ if __name__ == "__main__":
         axis="columns",
         names=["Dataset", "Metric"]
     )
-    all_results = filter_and_sort_results(all_results, normalize_nlpd=True)
+    all_results = filter_and_sort_results(all_results, normalize_nlpd=False)
     with open(OUTPUT_DIR / "regression.tex", "w") as f:
         f.write(get_latex_table(all_results))
 
