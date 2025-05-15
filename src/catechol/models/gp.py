@@ -80,7 +80,7 @@ class GPModel(Model):
             bounds=bounds,
         )
 
-    def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
+    def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame, mean_module = ZeroMean()) -> None:
         train_X_featurized = featurize_input_df(
             train_X, self.featurization, remove_constant=True, normalize_feats=True
         )
@@ -116,7 +116,7 @@ class GPModel(Model):
             model = model_cls(
                 train_X_tensor,
                 train_Y_tensor,
-                mean_module=ZeroMean(),
+                mean_module=mean_module,
                 input_transform=warp,
             )
 

@@ -15,6 +15,8 @@ from catechol.data.loader import (
 from catechol.models import get_model
 from catechol.script_utils import StoreDict
 
+from catechol.models.learn_mean import LearnMean
+
 def main(model_name: str, featurization: FeaturizationType, kwargs):
     model = get_model(model_name=model_name, featurization=featurization, **kwargs)
     X, Y = load_solvent_ramp_data()
@@ -30,7 +32,8 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
     split_generator = generate_leave_one_ramp_out_splits(X, Y)
     for i, split in tqdm.tqdm(enumerate(split_generator), total=13):
         (train_X, train_Y), (test_X, test_Y) = split
-        model.train(train_X, train_Y)
+        prior_mean = LearnMean(train_X, train_Y, featurization=featurization, **kwargs)
+        model.train(train_X, train_Y, prior_mean=prior_mean)
 
         test_X, test_Y = replace_repeated_measurements_with_average(test_X, test_Y)
         predictions = model.predict(test_X)
@@ -50,6 +53,7 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
 
     return results
 
+main("GPModel", "spange_descriptors", {})
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(

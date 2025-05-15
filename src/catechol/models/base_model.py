@@ -18,11 +18,11 @@ class Model(ABC):
         self.featurization = featurization
         self.target_labels = []
 
-    def train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame, *args, **kwargs) -> None:
+    def train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame, prior_mean = None, *args, **kwargs) -> None:
         """Train the model on the given data."""
         if self.normalize_inputs:
             train_X = normalize(train_X)
-        self._train(train_X, train_Y, *args, **kwargs)
+        self._train(train_X, train_Y, prior_mean, *args, **kwargs)
         self.is_fitted = True
         self.target_labels = train_Y.columns.to_list()
 
