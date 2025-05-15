@@ -60,8 +60,6 @@ def main(model_name: str, featurization: FeaturizationType, kwargs, learn_prior_
 
     return results
 
-main("GPModel", "spange_descriptors")
-
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
