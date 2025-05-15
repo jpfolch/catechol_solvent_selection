@@ -16,8 +16,9 @@ from catechol.models import get_model
 from catechol.script_utils import StoreDict
 
 from catechol.models.learn_mean import LearnMean
+from gpytorch.means import ZeroMean
 
-def main(model_name: str, featurization: FeaturizationType, kwargs):
+def main(model_name: str, featurization: FeaturizationType, kwargs, learn_prior_mean: bool = False):
     model = get_model(model_name=model_name, featurization=featurization, **kwargs)
     X, Y = load_solvent_ramp_data()
     # remove unnecessary columns
@@ -32,7 +33,10 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
     split_generator = generate_leave_one_ramp_out_splits(X, Y)
     for i, split in tqdm.tqdm(enumerate(split_generator), total=13):
         (train_X, train_Y), (test_X, test_Y) = split
-        prior_mean = LearnMean(train_X, train_Y, featurization=featurization, **kwargs)
+        if learn_prior_mean:
+            prior_mean = LearnMean(train_X, train_Y, featurization=featurization, **kwargs)
+        else:
+            prior_mean = ZeroMean()
         model.train(train_X, train_Y, prior_mean=prior_mean)
 
         test_X, test_Y = replace_repeated_measurements_with_average(test_X, test_Y)
@@ -49,11 +53,14 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
         results = pd.concat((results, result))
 
         # store the results as you go
-        results.to_csv(out_dir / f"{model_name}.csv", index=False)
+        if learn_prior_mean:
+            results.to_csv(out_dir / f"{model_name}_learn_mean.csv", index=False)
+        else:
+            results.to_csv(out_dir / f"{model_name}.csv", index=False)
 
     return results
 
-main("GPModel", "spange_descriptors", {})
+main("GPModel", "spange_descriptors")
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(
