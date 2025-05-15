@@ -5,8 +5,8 @@ from catechol.data.loader import (
     load_solvent_ramp_data,
     replace_repeated_measurements_with_average,
 )
-from catechol.models import GPModel
-from catechol.plots.plot_solvent_prediction import plot_solvent_ramp_prediction
+from catechol.models import GPModel, BaselineGPModel
+from catechol.plots.plot_solvent_prediction import plot_solvent_ramp_prediction_models
 import matplotlib.lines as mlines
 from catechol.plots import style
 import scienceplots
@@ -18,6 +18,7 @@ plt.rcParams["font.size"] = 12
 model = GPModel(
     multitask=False, use_input_warp=False, featurization="spange_descriptors"
 )
+baseline_model = BaselineGPModel()
 X, Y = load_solvent_ramp_data()
 # remove unnecessary columns
 X = X[INPUT_LABELS_FULL_DATA]
@@ -32,12 +33,13 @@ for _ in range(5):
 (train_X, train_Y), (test_X, test_Y) = next(split_generator)
 
 model.train(train_X, train_Y)
+baseline_model.train(train_X, train_Y)
 
 test_X, test_Y = replace_repeated_measurements_with_average(test_X, test_Y)
 
-fig, axs = plot_solvent_ramp_prediction(model, test_X, test_Y)
+fig, axs = plot_solvent_ramp_prediction_models([baseline_model, model], test_X, test_Y)
 
-fig.set_size_inches((8, 3))
+fig.set_size_inches((9, 3))
 
 # clean up the legend
 axs[0].legend().set_visible(False)
@@ -51,8 +53,4 @@ fig.legend(handles=legend_lines, loc="outside lower center", ncol=4,bbox_to_anch
 )
 fig.savefig("figures/solvent_ramp_prediction.pdf", bbox_inches="tight")
 
-for _ in range(5):
-    (train_X, train_Y), (test_X, test_Y) = next(split_generator)
-
-plot_solvent_ramp_prediction(model, test_X, test_Y)
 plt.show()
