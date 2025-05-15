@@ -52,7 +52,10 @@ def main(model_name: str, featurization: FeaturizationType, kwargs, learn_prior_
         results = pd.concat((results, result))
 
         # store the results as you go
-        results.to_csv(out_dir / f"{model_name}.csv", index=False)
+        if learn_prior_mean:
+            results.to_csv(out_dir / f"{model_name}_learn_mean.csv", index=False)
+        else:
+            results.to_csv(out_dir / f"{model_name}.csv", index=False)
 
 
     return results
