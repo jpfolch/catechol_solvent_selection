@@ -9,6 +9,31 @@ SINGLE_SOLVENT_RESULTS_DIR = Path("results/single_solvent")
 TRANSFER_LEARNING_RESULTS_DIR = Path("results/transfer_learning")
 ALL_MODELS = ["GPModel", "MLPModel", "LLMModel"]
 
+REGRESSION_TABLE = [
+    ("BaselineGPModel", "", ""),
+    ("GPModel", "acs", "indep"),
+    ("GPModel", "drfps", "indep"),
+    ("GPModel", "fragprints", "indep"),
+    ("GPModel", "spange", "indep"),
+    ("MLPModel", "acs", ""),
+    ("MLPModel", "drfps", ""),
+    ("MLPModel", "fragprints", ""),
+    ("MLPModel", "spange", ""),
+    ("LLMModel", "smiles", "rxnfp"),
+    ("LLMModel", "smiles", "chemberta"),
+    ("NODEModel", "spange", ""),
+    ("EODEModel", "spange", ""),
+    ("LODEModel", "spange", ""),
+]
+EXTENSIONS_TABLE = [
+    ("BaselineGPModel", "", ""),
+    ("GPModel", "spange", "indep"),
+    ("GPModel", "spange", "indep-learnmean"),
+    ("GPModel", "spange", "indep-separated"),
+    ("GPModel", "spange", "multi"),
+    ("GPModel", "spange", "indep-warp"),
+]
+
 
 def parse_model_filename(model_str: str) -> dict[str, str]:
     """Parse the saved name of the results from a model."""
@@ -114,7 +139,10 @@ if __name__ == "__main__":
     )
     all_results = filter_and_sort_results(all_results, normalize_nlpd=False)
     with open(OUTPUT_DIR / "regression.tex", "w") as f:
-        f.write(get_latex_table(all_results))
+        f.write(get_latex_table(all_results.loc[REGRESSION_TABLE]))
+
+    with open(OUTPUT_DIR / "extensions.tex", "w") as f:
+        f.write(get_latex_table(all_results.loc[EXTENSIONS_TABLE]))
 
     # Table: transfer learning
     tl_results = load_results(TRANSFER_LEARNING_RESULTS_DIR)
