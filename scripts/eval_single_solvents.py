@@ -14,8 +14,10 @@ from catechol.data.loader import (
 )
 from catechol.models import get_model
 from catechol.script_utils import StoreDict
+from catechol.models.learn_mean import LearnMean
+from gpytorch.means import ZeroMean
 
-def main(model_name: str, featurization: FeaturizationType, kwargs):
+def main(model_name: str, featurization: FeaturizationType, kwargs, learn_prior_mean: bool = False):
     model = get_model(model_name=model_name, featurization=featurization, **kwargs)
     X, Y = load_single_solvent_data()
     # remove unnecessary columns
@@ -30,7 +32,11 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
     split_generator = generate_leave_one_out_splits(X, Y)
     for i, split in tqdm.tqdm(enumerate(split_generator)):
         (train_X, train_Y), (test_X, test_Y) = split
-        model.train(train_X, train_Y)
+        if learn_prior_mean:
+            prior_mean = LearnMean(train_X, train_Y, **kwargs)
+        else:
+            prior_mean = ZeroMean()
+        model.train(train_X, train_Y, prior_mean=prior_mean)
 
         test_X, test_Y = replace_repeated_measurements_with_average(test_X, test_Y)
         predictions = model.predict(test_X)
@@ -65,6 +71,7 @@ if __name__ == "__main__":
     )
     argparser.add_argument("-m", "--model", type=str)
     argparser.add_argument("-f", "--featurization", type=str)
+    argparser.add_argument("-l", "--learn_mean", type=bool)
     argparser.add_argument(
         "-c",
         "--config",
@@ -76,4 +83,4 @@ if __name__ == "__main__":
     args = argparser.parse_args()
     # if no config is passed, create an empty dictionary
     config = args.config or {}
-    results = main(args.model, args.featurization, config)
+    results = main(args.model, args.featurization, config, args.learn_mean)
