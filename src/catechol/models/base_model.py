@@ -11,6 +11,7 @@ class Model(ABC):
 
     normalize_inputs = True
     extra_input_columns = []
+    extra_input_columns_full = []
 
     def __init__(self, featurization: FeaturizationType | None = None):
         """Initialize the model."""

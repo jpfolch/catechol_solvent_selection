@@ -114,6 +114,7 @@ class GPModel(Model):
         if transfer_learning:
             # we use the SM column to identify the task
             self.extra_input_columns = ["SM SMILES"]
+            self.extra_input_columns_full = ["SM SMILES"]
 
     def _get_mixed_solvent_representation(self, X_featurized: pd.DataFrame):
         alpha = X_featurized["SolventB%"]
