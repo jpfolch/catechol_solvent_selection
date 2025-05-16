@@ -106,6 +106,7 @@ class GPModel(Model):
         use_input_warp: bool = False,
         featurization: FeaturizationType | None = None,
         learn_prior_mean: bool = False,
+        use_separated_kernel: bool = False,
         al_strategy: str = "mutual_information",
     ):
         super().__init__(featurization=featurization)
@@ -114,6 +115,7 @@ class GPModel(Model):
         self.transfer_learning = transfer_learning
         self.active_learning_strategy = al_strategy
         self.learn_prior_mean = learn_prior_mean
+        self.use_separated_kernel = use_separated_kernel
         self.target_labels = []
         if transfer_learning:
             # we use the SM column to identify the task
@@ -202,11 +204,15 @@ class GPModel(Model):
         interpolate = is_df_solvent_ramp_dataset(train_X)
         input_transform = self._get_input_transform(train_X_featurized, interpolate)
 
-        # get shapes needed for defining the covariance function
-        _, aug_batch_shape = SingleTaskGP.get_batch_dimensions(train_X=train_X_tensor, train_Y=train_Y_tensor)
-        transformed_X = input_transform.transform(train_X_tensor) if input_transform else train_X_tensor
-        d = transformed_X.shape[-1]
-        covar_module = get_separated_kernel(aug_batch_shape, d, cont_dims=[0, 1])
+        if self.use_separated_kernel:
+            # get shapes needed for defining the covariance function
+            _, aug_batch_shape = SingleTaskGP.get_batch_dimensions(train_X=train_X_tensor, train_Y=train_Y_tensor)
+            transformed_X = input_transform.transform(train_X_tensor) if input_transform else train_X_tensor
+            d = transformed_X.shape[-1]
+            covar_module = get_separated_kernel(aug_batch_shape, d, cont_dims=[0, 1])
+        else:
+            covar_module = None
+        
         if self.transfer_learning:
             # we use an MTGP since only one experiment is observed for each X
             task_feature = train_X_featurized.columns.get_loc("SM SMILES")
@@ -271,7 +277,8 @@ class GPModel(Model):
         multi = "-multi" if self.multitask else "-indep"
         warp = "-warp" if self.use_input_warp else ""
         learnmean = "-learnmean" if self.learn_prior_mean else ""
-        return f"{self.__class__.__name__}{multi}{warp}{learnmean}-separated"
+        separated = "-separated" if self.use_separated_kernel else ""
+        return f"{self.__class__.__name__}{multi}{warp}{learnmean}{separated}"
 
     def select_next_ramp(
         self, ramps_to_train: list[int], all_ramps: list[int], X: pd.DataFrame):
