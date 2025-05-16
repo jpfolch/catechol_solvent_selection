@@ -50,7 +50,6 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
 
     return results
 
-
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
