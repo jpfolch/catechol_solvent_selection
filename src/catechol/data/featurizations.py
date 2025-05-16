@@ -13,7 +13,12 @@ FEATURIZATIONS = [
     "drfps_claisen",
 ]
 FeaturizationType = Literal[
-    "acs_pca_descriptors", "drfps_catechol", "fragprints", "spange_descriptors", "smiles", "drfps_claisen"
+    "acs_pca_descriptors",
+    "drfps_catechol",
+    "fragprints",
+    "spange_descriptors",
+    "smiles",
+    "drfps_claisen",
 ]
 
 

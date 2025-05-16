@@ -37,29 +37,20 @@ from typing import Any
 
 import torch
 from botorch.acquisition.objective import PosteriorTransform
-from botorch.exceptions.errors import UnsupportedError
-from botorch.models.gpytorch import GPyTorchModel, MultiTaskGPyTorchModel
+from botorch.models.gpytorch import GPyTorchModel
 from botorch.models.model import FantasizeMixin
 from botorch.models.transforms.input import InputTransform
-from botorch.models.transforms.outcome import OutcomeTransform, Standardize
-from botorch.models.utils.assorted import get_task_value_remapping
+from botorch.models.transforms.outcome import OutcomeTransform
 from botorch.models.utils.gpytorch_modules import (
-    get_covar_module_with_dim_scaled_prior,
-    get_gaussian_likelihood_with_lognormal_prior,
     MIN_INFERRED_NOISE_LEVEL,
+    get_covar_module_with_dim_scaled_prior,
 )
 from botorch.posteriors.multitask import MultitaskGPPosterior
-from botorch.utils.datasets import MultiTaskDataset, SupervisedDataset
-from botorch.utils.types import _DefaultType, DEFAULT
 from gpytorch.constraints import GreaterThan
 from gpytorch.distributions.multitask_multivariate_normal import (
     MultitaskMultivariateNormal,
 )
-from gpytorch.distributions.multivariate_normal import MultivariateNormal
-from gpytorch.kernels.index_kernel import IndexKernel
 from gpytorch.kernels.multitask_kernel import MultitaskKernel
-from gpytorch.likelihoods.gaussian_likelihood import FixedNoiseGaussianLikelihood
-from gpytorch.likelihoods.likelihood import Likelihood
 from gpytorch.likelihoods.multitask_gaussian_likelihood import (
     MultitaskGaussianLikelihood,
 )
@@ -70,7 +61,7 @@ from gpytorch.module import Module
 from gpytorch.priors.lkj_prior import LKJCovariancePrior
 from gpytorch.priors.prior import Prior
 from gpytorch.priors.smoothed_box_prior import SmoothedBoxPrior
-from gpytorch.priors.torch_priors import GammaPrior, LogNormalPrior
+from gpytorch.priors.torch_priors import LogNormalPrior
 from gpytorch.settings import detach_test_caches
 from gpytorch.utils.errors import CachingError
 from gpytorch.utils.memoize import cached, pop_from_cache
@@ -234,7 +225,7 @@ class KroneckerMultiTaskGP(ExactGP, GPyTorchModel, FantasizeMixin):
     @cached(name="train_full_covar")
     def train_full_covar(self):
         # train_x = self.transform_inputs(self.train_inputs[0])
-        train_x = (self.train_inputs[0])
+        train_x = self.train_inputs[0]
 
         # construct Kxx \otimes Ktt
         train_full_covar = self.covar_module(train_x).evaluate_kernel()
@@ -246,7 +237,7 @@ class KroneckerMultiTaskGP(ExactGP, GPyTorchModel, FantasizeMixin):
     @cached(name="predictive_mean_cache")
     def predictive_mean_cache(self):
         # train_x = self.transform_inputs(self.train_inputs[0])
-        train_x = (self.train_inputs[0])
+        train_x = self.train_inputs[0]
         train_noise = self.likelihood._shaped_noise_covar(train_x.shape)
         if detach_test_caches.on():
             train_noise = train_noise.detach()
@@ -278,7 +269,7 @@ class KroneckerMultiTaskGP(ExactGP, GPyTorchModel, FantasizeMixin):
 
         X = self.transform_inputs(X)
         # train_x = self.transform_inputs(self.train_inputs[0])
-        train_x = (self.train_inputs[0])
+        train_x = self.train_inputs[0]
 
         # construct Ktt
         task_covar = self._task_covar_matrix

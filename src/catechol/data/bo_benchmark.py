@@ -1,14 +1,18 @@
-from catechol.data.loader import load_solvent_ramp_data
-from catechol.data.loader import replace_repeated_measurements_with_average
-from catechol.data.data_labels import INPUT_LABELS_FULL_DATA
 import numpy as np
 
-class BOBenchmark():
+from catechol.data.data_labels import INPUT_LABELS_FULL_DATA
+from catechol.data.loader import (
+    load_solvent_ramp_data,
+    replace_repeated_measurements_with_average,
+)
+
+
+class BOBenchmark:
     """
     Class to load the data and query the BO benchmark.
     """
 
-    def __init__(self, featurization, lambdas = [5, 1, 3, 1/20], **kwargs):
+    def __init__(self, featurization, lambdas=[5, 1, 3, 1 / 20], **kwargs):
         super().__init__(**kwargs)
         X, Y = load_solvent_ramp_data()
 
@@ -30,7 +34,6 @@ class BOBenchmark():
 
         self.objective_precomputed = False
 
-    
     def objective_function(self, idx):
         if self.objective_precomputed:
             return self.objective_values[idx]
@@ -42,7 +45,6 @@ class BOBenchmark():
             return self.objective_values[idx]
 
     def _objective_function(self, idx):
-
         # obtain the output data
         X = self.X.iloc[idx]
         Y = self.Y.iloc[idx]
@@ -53,12 +55,17 @@ class BOBenchmark():
             selectivity = 0
         else:
             selectivity = Y["Product 2"] / total_yield
-        
+
         residence_time = X["Residence Time"]
         temperature = (X["Temperature"] - 175) / (225 - 175)
 
-        return self.l1 * total_yield + self.l2 * selectivity - self.l3 * temperature - self.l4 * residence_time
-    
+        return (
+            self.l1 * total_yield
+            + self.l2 * selectivity
+            - self.l3 * temperature
+            - self.l4 * residence_time
+        )
+
     def get_search_space(self):
         return self.X
 
@@ -67,5 +74,7 @@ class BOBenchmark():
             best_idx = np.argmax(self.objective_values)
             return self.X.iloc[best_idx], self.objective_values[best_idx]
         else:
-            best_idx = np.argmax([self._objective_function(i) for i in range(len(self.X))])
+            best_idx = np.argmax(
+                [self._objective_function(i) for i in range(len(self.X))]
+            )
             return self.X.iloc[best_idx], self._objective_function(best_idx)

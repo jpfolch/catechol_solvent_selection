@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from catechol.data.data_labels import TARGET_LABELS, INPUT_LABELS_FULL_DATA
+from catechol.data.data_labels import INPUT_LABELS_FULL_DATA, TARGET_LABELS
 from catechol.models import Model
 from catechol.plots import style
 
@@ -157,6 +157,7 @@ def plot_solvent_ramp_prediction(
     fig.suptitle(f"{solvent_a} to\n{solvent_b}", y=1.05)
     return fig, axs
 
+
 def plot_solvent_ramp_prediction_models(
     models: list[Model], test_X: pd.DataFrame, test_Y: pd.DataFrame
 ) -> tuple[plt.Figure, list[plt.Axes]]:
@@ -171,7 +172,7 @@ def plot_solvent_ramp_prediction_models(
 
         ax.legend()
         ax.set_xlabel("SolventB%")
-        ax.set_ylim(-0., 1.0)
+        ax.set_ylim(-0.0, 1.0)
         ax.set_yticks([0.0, 0.5, 1.0])
         ax.set_yticklabels([f"{int(y * 100)}" for y in ax.get_yticks()])
         ax.set_xlim(0.0, 1.0)

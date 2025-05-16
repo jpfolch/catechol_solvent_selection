@@ -5,7 +5,7 @@ from typing import Any, Generator
 import numpy as np
 import pandas as pd
 
-from catechol.data.data_labels import TARGET_LABELS, TARGET_CLAISEN_LABELS
+from catechol.data.data_labels import TARGET_CLAISEN_LABELS, TARGET_LABELS
 
 
 def replace_repeated_measurements_with_average(
@@ -47,6 +47,7 @@ def load_solvent_ramp_data() -> tuple[pd.DataFrame, pd.DataFrame]:
         column for column in experiments.columns if column not in TARGET_LABELS
     ]
     return experiments[input_cols], experiments[TARGET_LABELS]
+
 
 def load_claisen_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     """Load the train X and Y dataframes for the claisen experiments."""

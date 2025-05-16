@@ -45,7 +45,6 @@ def main(model_name: str, featurization: FeaturizationType, transfer: bool, kwar
         model_name_parts.insert(-1, "transfer")
         model_name = "-".join(model_name_parts)
 
-
     # this will generate all of the possible leave-one-out splits of the dataset
     split_generator = generate_leave_one_ramp_out_splits(X, Y)
     for i, split in tqdm.tqdm(enumerate(split_generator)):

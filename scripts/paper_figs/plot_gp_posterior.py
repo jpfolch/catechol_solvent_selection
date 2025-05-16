@@ -1,3 +1,4 @@
+import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 from catechol.data.data_labels import INPUT_LABELS_FULL_DATA
 from catechol.data.loader import (
@@ -5,11 +6,10 @@ from catechol.data.loader import (
     load_solvent_ramp_data,
     replace_repeated_measurements_with_average,
 )
-from catechol.models import GPModel, BaselineGPModel
-from catechol.plots.plot_solvent_prediction import plot_solvent_ramp_prediction_models
-import matplotlib.lines as mlines
+from catechol.models import BaselineGPModel, GPModel
 from catechol.plots import style
-import scienceplots
+from catechol.plots.plot_solvent_prediction import plot_solvent_ramp_prediction_models
+
 plt.style.use(["science", "grid", "no-latex"])
 plt.rcParams["font.size"] = 12
 
@@ -46,9 +46,22 @@ axs[0].legend().set_visible(False)
 axs[1].legend().set_visible(False)
 
 legend_lines = [
-    mlines.Line2D([], [], color=clr, label=style.TARGET_TO_LABEL[name], marker="o", markeredgecolor="black", linestyle="None") for name, clr in style.TARGET_TO_COLOR.items()
-] 
-fig.legend(handles=legend_lines, loc="outside lower center", ncol=4,bbox_to_anchor=(0.5, -0.15),
+    mlines.Line2D(
+        [],
+        [],
+        color=clr,
+        label=style.TARGET_TO_LABEL[name],
+        marker="o",
+        markeredgecolor="black",
+        linestyle="None",
+    )
+    for name, clr in style.TARGET_TO_COLOR.items()
+]
+fig.legend(
+    handles=legend_lines,
+    loc="outside lower center",
+    ncol=4,
+    bbox_to_anchor=(0.5, -0.15),
     frameon=True,
 )
 fig.savefig("figures/solvent_ramp_prediction.pdf", bbox_inches="tight")
