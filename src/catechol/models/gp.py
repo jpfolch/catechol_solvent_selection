@@ -217,7 +217,7 @@ class GPModel(Model):
 
         self.model = model
         mll = ExactMarginalLogLikelihood(self.model.likelihood, self.model)
-        fit_gpytorch_mll(mll, optimizer_kwargs=dict(timeout_sec=5))
+        fit_gpytorch_mll(mll, optimizer_kwargs=dict(timeout_sec=30))
 
         self.target_labels = train_Y.columns.to_list()
 

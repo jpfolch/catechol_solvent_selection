@@ -101,7 +101,7 @@ if __name__ == "__main__":
     argparser.add_argument("-f", "--featurization", type=str)
     argparser.add_argument("-s", "--seed", type=int, default=239)
     argparser.add_argument("-i", "--initset", type=int, default=5)
-    argparser.add_argument("-st", "--strategy", type=str, default="mutual_information")
+    argparser.add_argument("-st", "--strategy", type=str, default="ei")
     argparser.add_argument(
         "-c",
         "--config",
