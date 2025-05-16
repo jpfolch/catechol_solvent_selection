@@ -8,6 +8,8 @@ from botorch.models.transforms.input import Warp
 from gpytorch.means import ZeroMean
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from gpytorch.priors.torch_priors import LogNormalPrior
+from catechol.models.learn_mean import LearnMean
+
 
 from catechol.data.data_labels import (
     get_data_labels_mean_var,
@@ -25,6 +27,7 @@ class GPModel(Model):
         transfer_learning: bool = False,
         use_input_warp: bool = False,
         featurization: FeaturizationType | None = None,
+        learn_prior_mean: bool = False,
         al_strategy: str = "mutual_information",
     ):
         super().__init__(featurization=featurization)
@@ -32,6 +35,7 @@ class GPModel(Model):
         self.use_input_warp = use_input_warp
         self.transfer_learning = transfer_learning
         self.active_learning_strategy = al_strategy
+        self.learn_prior_mean = learn_prior_mean
         self.target_labels = []
         if transfer_learning:
             # we use the SM column to identify the task
@@ -81,7 +85,7 @@ class GPModel(Model):
             bounds=bounds,
         )
 
-    def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame, mean_module = ZeroMean()) -> None:
+    def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
         train_X_featurized = featurize_input_df(
             train_X, self.featurization, remove_constant=True, normalize_feats=True
         )
@@ -101,6 +105,8 @@ class GPModel(Model):
             train_X_featurized.to_numpy(), dtype=torch.float64
         )
         train_Y_tensor = torch.tensor(train_Y.to_numpy(), dtype=torch.float64)
+
+        mean_module = LearnMean(train_X, train_Y) if self.learn_prior_mean else ZeroMean()
 
         warp = self._get_input_transform(train_X_featurized)
         if self.transfer_learning:
@@ -161,8 +167,8 @@ class GPModel(Model):
     def _get_model_name(self) -> str:
         multi = "-multi" if self.multitask else "-indep"
         warp = "-warp" if self.use_input_warp else ""
-        # transfer = "-transfer" if self.transfer_learning else ""
-        return f"{self.__class__.__name__}{multi}{warp}"
+        learnmean = "-learnmean" if self.learn_prior_mean else ""
+        return f"{self.__class__.__name__}{multi}{warp}{learnmean}"
 
     def select_next_ramp(
         self, ramps_to_train: list[int], all_ramps: list[int], X: pd.DataFrame):

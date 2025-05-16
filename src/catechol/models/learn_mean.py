@@ -1,9 +1,7 @@
 import torch
 from gpytorch.means import Mean
 import pandas as pd
-from catechol.data.loader import load_single_solvent_data
 
-from catechol.models import GPModel
 from catechol.data.normalize import normalize
 
 from botorch.models import SingleTaskGP
@@ -14,8 +12,6 @@ class LearnMean(Mean):
     def __init__(self, X: pd.DataFrame, Y: pd.DataFrame, batch_shape=torch.Size(), **kwargs):
         super(LearnMean, self).__init__()
         self.batch_shape = batch_shape
-
-        X = normalize(X)
 
         # extract the residence time and temperature
         X = X[["Residence Time", "Temperature"]]
