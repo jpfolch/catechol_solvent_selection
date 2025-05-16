@@ -122,30 +122,6 @@ class GPModel(Model):
             self.extra_input_columns = ["SM SMILES"]
             self.extra_input_columns_full = ["SM SMILES"]
 
-    def _get_mixed_solvent_representation(self, X_featurized: pd.DataFrame):
-        alpha = X_featurized["SolventB%"]
-
-        def get_solvent_feat(solvent: str):
-            feat = X_featurized.loc[
-                :, X_featurized.columns.str.startswith(f"{solvent}_")
-            ]
-            feat = feat.rename(columns=lambda c: c.removeprefix(f"{solvent}_"))
-            return feat
-
-        A_feat = get_solvent_feat("A")
-        B_feat = get_solvent_feat("B")
-
-        mixed_feat = A_feat.mul(1 - alpha, axis=0) + B_feat.mul(alpha, axis=0)
-
-        any_featurized = X_featurized.columns.str.match("^(A_|B_)")
-        return pd.concat(
-            (
-                X_featurized.loc[:, ~any_featurized],
-                mixed_feat,
-            ),
-            axis="columns",
-        )
-
     def _get_input_transform(self, train_X_featurized: pd.DataFrame, interpolate: bool):
         """Get the warping input transform."""
         transforms = {}
@@ -236,7 +212,7 @@ class GPModel(Model):
 
         self.model = model
         mll = ExactMarginalLogLikelihood(self.model.likelihood, self.model)
-        fit_gpytorch_mll(mll, optimizer_kwargs=dict(timeout_sec=30))
+        fit_gpytorch_mll(mll, optimizer_kwargs=dict(timeout_sec=5))
 
         self.target_labels = train_Y.columns.to_list()
 
@@ -345,11 +321,7 @@ class GPModel(Model):
                 remove_constant=True,
                 normalize_feats=True,
             )
-            if is_df_solvent_ramp_dataset(X_ramp):
-                X_ramp_featurized = self._get_mixed_solvent_representation(
-                    X_ramp_featurized
-                )
-
+        
             test_X_tensor = torch.from_numpy(X_ramp_featurized.to_numpy()).to(
                 torch.float64
             )
@@ -374,10 +346,6 @@ class GPModel(Model):
                 normalize_feats=True,
             )
 
-            if is_df_solvent_ramp_dataset(X_conjugate):
-                X_conjugate_featurized = self._get_mixed_solvent_representation(
-                    X_conjugate_featurized
-                )
             train_X_tensor = torch.from_numpy(
                 X_conjugate_featurized.to_numpy()
             ).to(torch.float64)
@@ -386,9 +354,9 @@ class GPModel(Model):
             dummy_Y = torch.zeros(size = (self.model.train_inputs[0].shape[0], train_X_tensor.shape[0]), dtype=torch.float64)
 
             # replace the models training data with the new training data
-            model_clone.train_inputs = (train_X_tensor,)
-            model_clone.train_targets = dummy_Y
-
+            model_clone.set_train_data(
+                model_clone.transform_inputs(train_X_tensor).unsqueeze(0), dummy_Y, strict=False
+            )
             # now calculate the entropy of X_y | all_ramps \ ramp_num
             model_clone.eval()
             with torch.no_grad():
