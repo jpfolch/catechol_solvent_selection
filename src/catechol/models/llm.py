@@ -15,13 +15,14 @@ from transformers import AutoConfig, AutoModel, AutoTokenizer
 
 from catechol.data.data_labels import get_data_labels_mean_var
 from catechol.data.loader import generate_leave_one_out_splits, train_test_split
-from catechol.data.featurizations import featurize_input_df
+
 
 from .base_model import Model
 
 
 class LLMModel(Model):
     extra_input_columns = ["Reaction SMILES"]
+    extra_input_columns_full = ["Reaction SMILES A", "Reaction SMILES B"]
     def __init__(
         self,
         pretrained_model_name: str = "seyonec/ChemBERTa-zinc-base-v1",
@@ -56,6 +57,10 @@ class LLMModel(Model):
         self.time_limit = time_limit
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+        # Learnable parameters for sigmoid
+        self.sigmoid_a = nn.Parameter(torch.tensor(1.0))
+        self.sigmoid_b = nn.Parameter(torch.tensor(0.0))
+        
         # To be set during training
         self.numerical_mean = None
         self.numerical_std = None
@@ -63,10 +68,11 @@ class LLMModel(Model):
         self.val_losses = []
         self.optimizer = None
         self.loss_fn = None
+        self.is_mixture = False
 
-        # Set up backbone, tokenizer, head, optimizer
+        # Set up backbone, tokenizer
         self._init_backbone_and_tokenizer()
-        self._init_head_and_optimizer()
+        
 
     def _set_seed(self, seed: int = 42):
         random.seed(seed)
@@ -76,6 +82,9 @@ class LLMModel(Model):
         os.environ["PYTHONHASHSEED"] = str(seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
+    
+    def _parameterized_sigmoid(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.sigmoid(self.sigmoid_a * x + self.sigmoid_b)
 
     def _init_backbone_and_tokenizer(self):
         if "rxnfp" in self.model_name.lower():
@@ -108,20 +117,29 @@ class LLMModel(Model):
             for param in self.backbone.parameters():
                 param.requires_grad = False
 
-    def _init_head_and_optimizer(self):
+    def _init_head_and_optimizer(self, output_size: int = 3):
         self.head = self.custom_head or self._build_default_head(
-            3, 2, self.dropout_head
+            output_size, 2, self.dropout_head
         ).to(self.device)
         self.loss_fn = nn.MSELoss()
-        self.optimizer = torch.optim.Adam(
-            [
+        param_groups = [
+            {
+                "params": self.backbone.parameters(),
+                "lr": self.learning_rate_backbone,
+            },
+            {
+                "params": self.head.parameters(),
+                "lr": self.learning_rate_head,
+            },
+        ]
+        if self.is_mixture:    
+            param_groups.append(
                 {
-                    "params": self.backbone.parameters(),
-                    "lr": self.learning_rate_backbone,
-                },
-                {"params": self.head.parameters(), "lr": self.learning_rate_head},
-            ]
-        )
+                    "params": [self.sigmoid_a, self.sigmoid_b],
+                    "lr": self.learning_rate_head,  # Or a separate learning rate if you want
+                }
+            )
+        self.optimizer = torch.optim.Adam(param_groups)
 
     def _build_default_head(
         self, output_size: int, num_extra_features: int, dropout_rate: float
@@ -150,14 +168,19 @@ class LLMModel(Model):
         else:
             return outputs.last_hidden_state[:, 0, :]
 
-    def _full_model_prediction(self, input_ids, attention_mask, normalized_numerical):
-        backbone_output = self._get_backbone_output(
-            input_ids, attention_mask, self.use_pooler_output
-        )
-        # Normalizing output of backbone
-        # backbone_output = (backbone_output - backbone_output.mean(dim=1, keepdim=True)) / (backbone_output.std(dim=1, keepdim=True) + 1e-6)
+    def _full_model_prediction(self, *inputs):
+        if len(inputs) == 3:  # Standard case
+            input_ids, attention_mask, normalized_numerical = inputs
+            output = self._get_backbone_output(input_ids, attention_mask, self.use_pooler_output)
+        else:  # Mixture case
+            ids_a, mask_a, ids_b, mask_b, pct_b, normalized_numerical = inputs
+            out_a = self._get_backbone_output(ids_a, mask_a, self.use_pooler_output)
+            out_b = self._get_backbone_output(ids_b, mask_b, self.use_pooler_output)
 
-        combined = torch.cat([backbone_output, normalized_numerical], dim=1)
+            weight_b = self._parameterized_sigmoid(pct_b)
+            output = out_a * (1 - weight_b) + out_b * weight_b
+
+        combined = torch.cat([output, normalized_numerical], dim=1)
         return self.head(combined)
 
     def tokenize_smiles(self, smiles_list):
@@ -192,29 +215,43 @@ class LLMModel(Model):
         return train_X_split, train_Y_split, val_X, val_Y
 
     def _prepare_training_tensors(self, X: pd.DataFrame, Y: pd.DataFrame = None):
-        smiles = X["Reaction SMILES"].tolist()
+        if "Reaction SMILES A" in X.columns and "Reaction SMILES B" in X.columns:
+            smiles_a = X["Reaction SMILES A"].tolist()
+            smiles_b = X["Reaction SMILES B"].tolist()
+            pct_b = torch.tensor(X["SolventB%"].values, dtype=torch.float32).unsqueeze(1).to(self.device)           
+            self.is_mixture = True
+        else:
+            smiles = X["Reaction SMILES"].tolist()            
+            self.is_mixture = False
+            
         numerical_values = X[["Residence Time", "Temperature"]].values
-        numerical_tensor = torch.tensor(numerical_values, dtype=torch.float32).to(
-            self.device
-        )
+        numerical_tensor = torch.tensor(numerical_values, dtype=torch.float32).to(self.device)
 
         if self.numerical_mean is None or self.numerical_std is None:
             self.numerical_mean = numerical_tensor.mean(dim=0, keepdim=True)
             self.numerical_std = numerical_tensor.std(dim=0, keepdim=True)
 
         normalized_numerical = self._normalize_numerical(numerical_tensor)
+
         if Y is not None:
             targets = torch.tensor(Y.values, dtype=torch.float32).to(self.device)
         else:
             targets = None
 
-        input_ids, attention_mask = self.tokenize_smiles(smiles)
-        return (
-            input_ids.to(self.device),
-            attention_mask.to(self.device),
-            normalized_numerical,
-            targets,
-        )
+        if self.is_mixture:
+            ids_a, mask_a = self.tokenize_smiles(smiles_a)
+            ids_b, mask_b = self.tokenize_smiles(smiles_b)
+            return (
+                ids_a.to(self.device), mask_a.to(self.device),
+                ids_b.to(self.device), mask_b.to(self.device),
+                pct_b, normalized_numerical, targets
+            )
+        else:
+            input_ids, attention_mask = self.tokenize_smiles(smiles)
+            return (
+                input_ids.to(self.device), attention_mask.to(self.device),
+                normalized_numerical, targets
+            )
 
     def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
         val_loss = "NA"
@@ -227,63 +264,45 @@ class LLMModel(Model):
         else:
             train_X_split, train_Y_split = train_X, train_Y
 
-        self.head.train()
-        self.backbone.train()
+        
 
         # Training set prep
         if not self.batch_size:
             self.batch_size = train_X_split.shape[0]
 
-        (
-            input_ids,
-            attention_mask,
-            normalized_numerical,
-            targets,
-        ) = self._prepare_training_tensors(train_X_split, train_Y_split)
-        dataset = TensorDataset(
-            input_ids, attention_mask, normalized_numerical, targets
-        )
+        train_tensors = self._prepare_training_tensors(train_X_split, train_Y_split)
+        dataset = TensorDataset(*train_tensors)
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
         # Validation set prep
         if validation:
-            (
-                val_input_ids,
-                val_attention_mask,
-                val_normalized_numerical,
-                val_targets,
-            ) = self._prepare_training_tensors(val_X, val_Y)
+            val_tensors = self._prepare_training_tensors(val_X, val_Y)
+            *val_inputs, val_targets = val_tensors
             best_val_loss = float("inf")
             best_head_state, best_backbone_state = None, None
-
+            
+        self._init_head_and_optimizer(output_size=train_Y.shape[1])
+        self.head.train()
+        self.backbone.train()
         # Then your training loop:
         start_time = time.time()
         for epoch in range(self.epochs):
             epoch_loss = 0.0
             for batch in tqdm(loader, desc=f"Epoch {epoch+1}/{self.epochs}"):
-                (
-                    batch_input_ids,
-                    batch_attention_mask,
-                    batch_numerical,
-                    batch_targets,
-                ) = batch
+                *inputs, targets = batch                
                 self.optimizer.zero_grad()
-                preds = self._full_model_prediction(
-                    batch_input_ids, batch_attention_mask, batch_numerical
-                )
-                loss = self.loss_fn(preds, batch_targets)
+                preds = self._full_model_prediction(*inputs)
+                loss = self.loss_fn(preds, targets)
                 loss.backward()
                 self.optimizer.step()
-                epoch_loss += loss.item() * len(batch_input_ids)
+                epoch_loss += loss.item() * targets.size(0)
 
             if validation:
                 # Validation
                 self.head.eval()
                 self.backbone.eval()
                 with torch.no_grad():
-                    val_predictions = self._full_model_prediction(
-                        val_input_ids, val_attention_mask, val_normalized_numerical
-                    )
+                    val_predictions = self._full_model_prediction(*val_inputs)
                     val_loss = self.loss_fn(val_predictions, val_targets)
                 self.val_losses.append(val_loss)
                 # Save best weights
@@ -317,21 +336,14 @@ class LLMModel(Model):
         self.head.eval()
         self.backbone.eval()
 
-        (
-            input_ids,
-            attention_mask,
-            normalized_numerical,
-            _,
-        ) = self._prepare_training_tensors(test_X)
-
+        *inputs, _ = self._prepare_training_tensors(test_X)
+        
         with torch.no_grad():
-            preds = self._full_model_prediction(
-                input_ids, attention_mask, normalized_numerical
-            )
+            preds = self._full_model_prediction(*inputs)
             mean = preds.cpu().numpy()
             var = torch.zeros_like(preds).cpu().numpy()
 
-        mean_lbl, var_lbl = get_data_labels_mean_var()
+        mean_lbl, var_lbl = get_data_labels_mean_var(self.target_labels)
         mean_df = pd.DataFrame(mean, columns=mean_lbl)
         var_df = pd.DataFrame(var, columns=var_lbl)
         return pd.concat([mean_df, var_df], axis=1)

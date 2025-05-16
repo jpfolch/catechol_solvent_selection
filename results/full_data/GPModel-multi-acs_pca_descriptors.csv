@@ -1,14 +1,14 @@
 Test solvent,mse,nlpd
-"Methanol-Ethylene Glycol [1,2-Ethanediol]",0.04988122099104682,-4.033969104157707
-"1,1,1,3,3,3-Hexafluoropropan-2-ol-2-Methyltetrahydrofuran [2-MeTHF]",0.22434992437325016,-1.1004075799941049
-Cyclohexane-IPA [Propan-2-ol],0.21116282517587515,-0.8561156831652268
-Water.Acetonitrile-Acetonitrile,0.02994044110255032,0.5730047714343097
-Acetonitrile-Acetonitrile.Acetic Acid,0.023943393010765313,0.9991999761814033
-2-Methyltetrahydrofuran [2-MeTHF]-Diethyl Ether [Ether],0.06722508472318998,-3.00789366794271
-"2,2,2-Trifluoroethanol-Water.2,2,2-Trifluoroethanol",0.021293215079063177,-3.5439174169276915
-"DMA [N,N-Dimethylacetamide]-Decanol",0.09553933598912524,-2.0531036440871833
-Ethanol-THF [Tetrahydrofuran],0.008536779035392203,-5.222022824061696
-Dihydrolevoglucosenone (Cyrene)-Ethyl Acetate,0.4494381361035525,-3.9578571582772653
-MTBE [tert-Butylmethylether]-Butanone [MEK],0.02200280568915221,-1.6508069670492898
-tert-Butanol [2-Methylpropan-2-ol]-Dimethyl Carbonate,0.016475662510381156,2.713564713194026
-Methyl Propionate-Ethyl Lactate,0.05569463845574428,-4.361225182699042
+"Methanol-Ethylene Glycol [1,2-Ethanediol]",0.07024328973717321,-3.7336550631587437
+"1,1,1,3,3,3-Hexafluoropropan-2-ol-2-Methyltetrahydrofuran [2-MeTHF]",0.04613270133389282,-2.961998888013187
+Cyclohexane-IPA [Propan-2-ol],0.14658394363069494,1.499358208828172
+Water.Acetonitrile-Acetonitrile,0.038379455002758064,-0.6620959713262315
+Acetonitrile-Acetonitrile.Acetic Acid,0.023897763775805117,-2.202151812623082
+2-Methyltetrahydrofuran [2-MeTHF]-Diethyl Ether [Ether],0.05828625302044177,-3.5592393225082875
+"2,2,2-Trifluoroethanol-Water.2,2,2-Trifluoroethanol",0.019658619245640517,-3.238223548796081
+"DMA [N,N-Dimethylacetamide]-Decanol",0.04693097597344868,-2.878617650228671
+Ethanol-THF [Tetrahydrofuran],0.009108838645853507,-5.738906232306035
+Dihydrolevoglucosenone (Cyrene)-Ethyl Acetate,0.2498272222545811,-3.9017327092255574
+MTBE [tert-Butylmethylether]-Butanone [MEK],0.02049344162940172,-2.176878665878982
+tert-Butanol [2-Methylpropan-2-ol]-Dimethyl Carbonate,0.01642130075355446,-0.8151684055815102
+Methyl Propionate-Ethyl Lactate,0.06054203592082316,-5.0337895947852465

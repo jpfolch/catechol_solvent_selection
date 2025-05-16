@@ -11,7 +11,7 @@ from catechol.plots.plot_solvent_prediction import plot_solvent_ramp_prediction
 
 # model = GPModel(featurization="spange_descriptors")
 model = GPModel(
-    multitask=False, use_input_warp=True, featurization="spange_descriptors"
+    multitask=False, use_input_warp=False, featurization="spange_descriptors"
 )
 X, Y = load_solvent_ramp_data()
 # remove unnecessary columns

@@ -19,7 +19,7 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
     model = get_model(model_name=model_name, featurization=featurization, **kwargs)
     X, Y = load_solvent_ramp_data()
     # remove unnecessary columns
-    X = X[INPUT_LABELS_FULL_DATA]
+    X = X[INPUT_LABELS_FULL_DATA + model.extra_input_columns_full]
 
     results = pd.DataFrame(columns=["Test solvent", "mse", "nlpd"])
     out_dir = Path("results/full_data/")
@@ -49,7 +49,6 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
         results.to_csv(out_dir / f"{model_name}.csv", index=False)
 
     return results
-
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(
