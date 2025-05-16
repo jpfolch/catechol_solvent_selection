@@ -1,15 +1,15 @@
-import torch
-from gpytorch.means import Mean
 import pandas as pd
-
-from catechol.data.normalize import normalize
-
-from botorch.models import SingleTaskGP
-from gpytorch.mlls import ExactMarginalLogLikelihood
+import torch
 from botorch import fit_gpytorch_mll
+from botorch.models import SingleTaskGP
+from gpytorch.means import Mean
+from gpytorch.mlls import ExactMarginalLogLikelihood
+
 
 class LearnMean(Mean):
-    def __init__(self, X: pd.DataFrame, Y: pd.DataFrame, batch_shape=torch.Size(), **kwargs):
+    def __init__(
+        self, X: pd.DataFrame, Y: pd.DataFrame, batch_shape=torch.Size(), **kwargs
+    ):
         super(LearnMean, self).__init__()
         self.batch_shape = batch_shape
 
@@ -23,8 +23,6 @@ class LearnMean(Mean):
         mll = ExactMarginalLogLikelihood(self.prior_model.likelihood, self.prior_model)
         fit_gpytorch_mll(mll, optimizer_kwargs=dict(timeout_sec=30))
 
-
-
     def forward(self, input):
         # extract the first two columns of the input
         X = input[..., :2]
@@ -34,7 +32,7 @@ class LearnMean(Mean):
         # else:
         #     return mean.expand(_mul_broadcast_shape(input.shape[:-1], mean.shape))
         return mean[:, :, 0]
-    
+
     def _predict_mean(self, test_X):
         posterior = self.prior_model.posterior(test_X)
         return posterior.mean

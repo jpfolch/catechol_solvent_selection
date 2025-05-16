@@ -1,8 +1,8 @@
 import argparse
 import textwrap
+from pathlib import Path
 
 import pandas as pd
-from pathlib import Path
 import tqdm
 from catechol import metrics
 from catechol.data.data_labels import INPUT_LABELS_SINGLE_SOLVENT
@@ -14,6 +14,7 @@ from catechol.data.loader import (
 )
 from catechol.models import get_model
 from catechol.script_utils import StoreDict
+
 
 def main(model_name: str, featurization: FeaturizationType, kwargs):
     model = get_model(model_name=model_name, featurization=featurization, **kwargs)
@@ -47,7 +48,6 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
 
         # store the results as you go
         results.to_csv(out_dir / f"{model_name}.csv", index=False)
-
 
     return results
 

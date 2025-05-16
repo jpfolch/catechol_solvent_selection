@@ -1,8 +1,6 @@
 import os
 
 import matplotlib.pyplot as plt
-import scienceplots
-
 from catechol.data.loader import load_solvent_ramp_data
 
 plt.style.use(["science", "no-latex", "grid"])
@@ -12,14 +10,14 @@ directory = "figures/full_surfaces"
 if not os.path.exists(directory):
     os.makedirs(directory)
 
-if not os.path.exists(directory + '/SM'):
-    os.makedirs(directory + '/SM')
+if not os.path.exists(directory + "/SM"):
+    os.makedirs(directory + "/SM")
 
-if not os.path.exists(directory + '/Product 2'):
-    os.makedirs(directory + '/Product 2')
+if not os.path.exists(directory + "/Product 2"):
+    os.makedirs(directory + "/Product 2")
 
-if not os.path.exists(directory + '/Product 3'):
-    os.makedirs(directory + '/Product 3')
+if not os.path.exists(directory + "/Product 3"):
+    os.makedirs(directory + "/Product 3")
 
 # load the full data
 X, Y = load_solvent_ramp_data()
@@ -44,7 +42,6 @@ for exp in exp_nums:
 
     # plot each 3d surface
     for prod in ["SM", "Product 2", "Product 3"]:
-
         # create color map for values between 0 and 100, to represent yields
         color_map = plt.get_cmap("viridis")
         # for values between 0 and 100
@@ -56,7 +53,17 @@ for exp in exp_nums:
 
         fig, ax = plt.subplots(figsize=(8, 6), subplot_kw={"projection": "3d"})
         # scatter
-        ax.scatter(x, y, z, c=c, cmap=color_map, marker="o", edgecolor="k", s=100, depthshade=False)
+        ax.scatter(
+            x,
+            y,
+            z,
+            c=c,
+            cmap=color_map,
+            marker="o",
+            edgecolor="k",
+            s=100,
+            depthshade=False,
+        )
 
         ax.set_xlabel("Residence Time / min", fontsize=16, labelpad=10)
         ax.set_ylabel("SolventB%", fontsize=16, labelpad=10)
@@ -71,7 +78,7 @@ for exp in exp_nums:
         if len(title) > 30:
             title = title.split(" to ")
             title = f"{title[0]} to \n{title[1]}"
-        
+
         ax.set_title(title, fontsize=16, pad=-30, y=1.05)
 
         # set the view angle
@@ -100,10 +107,10 @@ for exp in exp_nums:
         ax.tick_params(axis="both", which="major", labelsize=16)
         ax.tick_params(axis="both", which="minor", labelsize=16)
         # set the font size
-        for item in ([ax.xaxis.label, ax.yaxis.label, ax.zaxis.label]):
+        for item in [ax.xaxis.label, ax.yaxis.label, ax.zaxis.label]:
             item.set_fontsize(16)
         # set the font size for the ticks
-        for item in (ax.get_xticklabels() + ax.get_yticklabels() + ax.get_zticklabels()):
+        for item in ax.get_xticklabels() + ax.get_yticklabels() + ax.get_zticklabels():
             item.set_fontsize(16)
 
         ax.set_box_aspect(None, zoom=0.75)

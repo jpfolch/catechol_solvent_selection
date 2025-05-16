@@ -1,12 +1,5 @@
 import numpy as np
 import pandas as pd
-
-from catechol.data.data_labels import get_data_labels_mean_var
-
-from .base_model import Model
-
-import numpy as np
-import pandas as pd
 import torch
 from botorch import fit_gpytorch_mll
 from botorch.models import SingleTaskGP
@@ -18,7 +11,6 @@ from catechol.data.data_labels import (
 )
 
 from .base_model import Model
-
 
 
 class BaselineModel(Model):
@@ -84,7 +76,6 @@ class BaselineGPModel(Model):
         mean_df = pd.DataFrame(mean, columns=mean_lbl)
         var_df = pd.DataFrame(var, columns=var_lbl)
         return pd.concat([mean_df, var_df], axis=1)
-
 
     def get_model_name(self):
         # overwrite the base Model because featurizations don't matter

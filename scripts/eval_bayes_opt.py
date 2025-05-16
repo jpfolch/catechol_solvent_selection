@@ -4,16 +4,26 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from catechol.data.featurizations import FeaturizationType
 from catechol.data.bo_benchmark import BOBenchmark
+from catechol.data.featurizations import FeaturizationType
 from catechol.models import get_model
 from catechol.script_utils import StoreDict
 
 
 def main(
-    model_name: str, featurization: FeaturizationType, kwargs, init_set_size: int, seed: int, strategy: str
+    model_name: str,
+    featurization: FeaturizationType,
+    kwargs,
+    init_set_size: int,
+    seed: int,
+    strategy: str,
 ):
-    model = get_model(model_name=model_name, featurization=featurization, bo_strategy = strategy, **kwargs)
+    model = get_model(
+        model_name=model_name,
+        featurization=featurization,
+        bo_strategy=strategy,
+        **kwargs,
+    )
     bench = BOBenchmark(model.featurization, **kwargs)
 
     results = pd.DataFrame(
@@ -53,10 +63,8 @@ def main(
         num_of_points += 1
         iteration += 1
 
-
-
     for iteration in range(1, 100):
-        if model.bo_strategy not in  ["random"]:
+        if model.bo_strategy not in ["random"]:
             # select a random point
             model.train(pd.DataFrame(train_X), pd.DataFrame(train_Y))
         # select the next ramp
@@ -113,4 +121,6 @@ if __name__ == "__main__":
     args = argparser.parse_args()
     # if no config is passed, create an empty dictionary
     config = args.config or {}
-    results = main(args.model, args.featurization, config, args.initset, args.seed, args.strategy)
+    results = main(
+        args.model, args.featurization, config, args.initset, args.seed, args.strategy
+    )

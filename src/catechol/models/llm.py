@@ -16,13 +16,13 @@ from transformers import AutoConfig, AutoModel, AutoTokenizer
 from catechol.data.data_labels import get_data_labels_mean_var
 from catechol.data.loader import generate_leave_one_out_splits, train_test_split
 
-
 from .base_model import Model
 
 
 class LLMModel(Model):
     extra_input_columns = ["Reaction SMILES"]
     extra_input_columns_full = ["Reaction SMILES A", "Reaction SMILES B"]
+
     def __init__(
         self,
         pretrained_model_name: str = "seyonec/ChemBERTa-zinc-base-v1",
@@ -60,7 +60,7 @@ class LLMModel(Model):
         # Learnable parameters for sigmoid
         self.sigmoid_a = nn.Parameter(torch.tensor(1.0))
         self.sigmoid_b = nn.Parameter(torch.tensor(0.0))
-        
+
         # To be set during training
         self.numerical_mean = None
         self.numerical_std = None
@@ -72,7 +72,6 @@ class LLMModel(Model):
 
         # Set up backbone, tokenizer
         self._init_backbone_and_tokenizer()
-        
 
     def _set_seed(self, seed: int = 42):
         random.seed(seed)
@@ -82,7 +81,7 @@ class LLMModel(Model):
         os.environ["PYTHONHASHSEED"] = str(seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-    
+
     def _parameterized_sigmoid(self, x: torch.Tensor) -> torch.Tensor:
         return torch.sigmoid(self.sigmoid_a * x + self.sigmoid_b)
 
@@ -132,7 +131,7 @@ class LLMModel(Model):
                 "lr": self.learning_rate_head,
             },
         ]
-        if self.is_mixture:    
+        if self.is_mixture:
             param_groups.append(
                 {
                     "params": [self.sigmoid_a, self.sigmoid_b],
@@ -171,7 +170,9 @@ class LLMModel(Model):
     def _full_model_prediction(self, *inputs):
         if len(inputs) == 3:  # Standard case
             input_ids, attention_mask, normalized_numerical = inputs
-            output = self._get_backbone_output(input_ids, attention_mask, self.use_pooler_output)
+            output = self._get_backbone_output(
+                input_ids, attention_mask, self.use_pooler_output
+            )
         else:  # Mixture case
             ids_a, mask_a, ids_b, mask_b, pct_b, normalized_numerical = inputs
             out_a = self._get_backbone_output(ids_a, mask_a, self.use_pooler_output)
@@ -218,14 +219,20 @@ class LLMModel(Model):
         if "Reaction SMILES A" in X.columns and "Reaction SMILES B" in X.columns:
             smiles_a = X["Reaction SMILES A"].tolist()
             smiles_b = X["Reaction SMILES B"].tolist()
-            pct_b = torch.tensor(X["SolventB%"].values, dtype=torch.float32).unsqueeze(1).to(self.device)           
+            pct_b = (
+                torch.tensor(X["SolventB%"].values, dtype=torch.float32)
+                .unsqueeze(1)
+                .to(self.device)
+            )
             self.is_mixture = True
         else:
-            smiles = X["Reaction SMILES"].tolist()            
+            smiles = X["Reaction SMILES"].tolist()
             self.is_mixture = False
-            
+
         numerical_values = X[["Residence Time", "Temperature"]].values
-        numerical_tensor = torch.tensor(numerical_values, dtype=torch.float32).to(self.device)
+        numerical_tensor = torch.tensor(numerical_values, dtype=torch.float32).to(
+            self.device
+        )
 
         if self.numerical_mean is None or self.numerical_std is None:
             self.numerical_mean = numerical_tensor.mean(dim=0, keepdim=True)
@@ -242,15 +249,21 @@ class LLMModel(Model):
             ids_a, mask_a = self.tokenize_smiles(smiles_a)
             ids_b, mask_b = self.tokenize_smiles(smiles_b)
             return (
-                ids_a.to(self.device), mask_a.to(self.device),
-                ids_b.to(self.device), mask_b.to(self.device),
-                pct_b, normalized_numerical, targets
+                ids_a.to(self.device),
+                mask_a.to(self.device),
+                ids_b.to(self.device),
+                mask_b.to(self.device),
+                pct_b,
+                normalized_numerical,
+                targets,
             )
         else:
             input_ids, attention_mask = self.tokenize_smiles(smiles)
             return (
-                input_ids.to(self.device), attention_mask.to(self.device),
-                normalized_numerical, targets
+                input_ids.to(self.device),
+                attention_mask.to(self.device),
+                normalized_numerical,
+                targets,
             )
 
     def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
@@ -263,8 +276,6 @@ class LLMModel(Model):
             validation = True
         else:
             train_X_split, train_Y_split = train_X, train_Y
-
-        
 
         # Training set prep
         if not self.batch_size:
@@ -280,7 +291,7 @@ class LLMModel(Model):
             *val_inputs, val_targets = val_tensors
             best_val_loss = float("inf")
             best_head_state, best_backbone_state = None, None
-            
+
         self._init_head_and_optimizer(output_size=train_Y.shape[1])
         self.head.train()
         self.backbone.train()
@@ -289,7 +300,7 @@ class LLMModel(Model):
         for epoch in range(self.epochs):
             epoch_loss = 0.0
             for batch in tqdm(loader, desc=f"Epoch {epoch+1}/{self.epochs}"):
-                *inputs, targets = batch                
+                *inputs, targets = batch
                 self.optimizer.zero_grad()
                 preds = self._full_model_prediction(*inputs)
                 loss = self.loss_fn(preds, targets)
@@ -337,7 +348,7 @@ class LLMModel(Model):
         self.backbone.eval()
 
         *inputs, _ = self._prepare_training_tensors(test_X)
-        
+
         with torch.no_grad():
             preds = self._full_model_prediction(*inputs)
             mean = preds.cpu().numpy()

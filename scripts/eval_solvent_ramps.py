@@ -15,6 +15,7 @@ from catechol.data.loader import (
 from catechol.models import get_model
 from catechol.script_utils import StoreDict
 
+
 def main(model_name: str, featurization: FeaturizationType, kwargs):
     model = get_model(model_name=model_name, featurization=featurization, **kwargs)
     X, Y = load_solvent_ramp_data()
@@ -49,6 +50,7 @@ def main(model_name: str, featurization: FeaturizationType, kwargs):
         results.to_csv(out_dir / f"{model_name}.csv", index=False)
 
     return results
+
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(

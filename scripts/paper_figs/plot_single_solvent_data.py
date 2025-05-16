@@ -1,8 +1,6 @@
-
-import matplotlib.pyplot as plt
-import scienceplots
 import os
 
+import matplotlib.pyplot as plt
 from catechol.data.loader import load_single_solvent_data
 
 plt.style.use(["science", "no-latex", "grid"])
@@ -17,14 +15,14 @@ directory = "figures/single_solvent_plots"
 if not os.path.exists(directory):
     os.makedirs(directory)
 
-if not os.path.exists(directory + '/225_degrees'):
-    os.makedirs(directory + '/225_degrees')
+if not os.path.exists(directory + "/225_degrees"):
+    os.makedirs(directory + "/225_degrees")
 
-if not os.path.exists(directory + '/175_degrees'):
-    os.makedirs(directory + '/175_degrees')
+if not os.path.exists(directory + "/175_degrees"):
+    os.makedirs(directory + "/175_degrees")
 
-if not os.path.exists(directory + '/200_degrees'):
-    os.makedirs(directory + '/200_degrees')
+if not os.path.exists(directory + "/200_degrees"):
+    os.makedirs(directory + "/200_degrees")
 
 
 for solvent in solvents:
@@ -44,7 +42,9 @@ for solvent in solvents:
 
         # plot the data
         ax.scatter(
-            X_solvent["Residence Time"], Y_solvent["SM"] * 100, label="Starting Material"
+            X_solvent["Residence Time"],
+            Y_solvent["SM"] * 100,
+            label="Starting Material",
         )
         ax.scatter(
             X_solvent["Residence Time"], Y_solvent["Product 2"] * 100, label="Product 2"
@@ -98,7 +98,11 @@ for solvent in solvents:
         fig, ax = plt.subplots(figsize=(8, 6))
 
         # plot the data
-        ax.scatter(X_solvent["Residence Time"], Y_solvent["SM"] * 100, label="Starting Material")
+        ax.scatter(
+            X_solvent["Residence Time"],
+            Y_solvent["SM"] * 100,
+            label="Starting Material",
+        )
         ax.scatter(
             X_solvent["Residence Time"], Y_solvent["Product 2"] * 100, label="Product 2"
         )
@@ -150,7 +154,11 @@ for solvent in solvents:
         fig, ax = plt.subplots(figsize=(8, 6))
 
         # plot the data
-        ax.scatter(X_solvent["Residence Time"], Y_solvent["SM"] * 100, label="Starting Material")
+        ax.scatter(
+            X_solvent["Residence Time"],
+            Y_solvent["SM"] * 100,
+            label="Starting Material",
+        )
         ax.scatter(
             X_solvent["Residence Time"], Y_solvent["Product 2"] * 100, label="Product 2"
         )

@@ -9,8 +9,11 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
-from catechol.data.data_labels import get_data_labels_mean_var, is_df_solvent_ramp_dataset
-from catechol.data.featurizations import featurize_input_df, FeaturizationType
+from catechol.data.data_labels import (
+    get_data_labels_mean_var,
+    is_df_solvent_ramp_dataset,
+)
+from catechol.data.featurizations import FeaturizationType, featurize_input_df
 from catechol.data.loader import generate_leave_one_out_splits, train_test_split
 
 from .base_model import Model
@@ -47,7 +50,7 @@ class MLPModel(Model):
         self.optimizer = None
         self.loss_fn = None
         self.is_mixture = None
-        
+
         # If mixture using sigmoid
         self.sigmoid_a = nn.Parameter(torch.tensor(1.0))
         self.sigmoid_b = nn.Parameter(torch.tensor(0.0))
@@ -73,16 +76,18 @@ class MLPModel(Model):
         )
 
     def _init_MLP_and_optimizer(self, num_features, output_size=3):
-        self.MLP = self.custom_MLP or self._build_MLP(output_size, num_features, self.dropout).to(
-            self.device
-        )
+        self.MLP = self.custom_MLP or self._build_MLP(
+            output_size, num_features, self.dropout
+        ).to(self.device)
         self.loss_fn = nn.MSELoss()
-        params = [           
+        params = [
             {"params": self.MLP.parameters(), "lr": self.learning_rate},
         ]
-        
+
         if self.is_mixture:
-            params.append({"params": [self.sigmoid_a, self.sigmoid_b], "lr": self.learning_rate})  # or another LR
+            params.append(
+                {"params": [self.sigmoid_a, self.sigmoid_b], "lr": self.learning_rate}
+            )  # or another LR
 
         self.optimizer = torch.optim.Adam(params)
 
@@ -101,7 +106,7 @@ class MLPModel(Model):
                 train_Y, train_percentage=0.8, seed=1
             )
         return train_X_split, train_Y_split, val_X, val_Y
-    
+
     def _get_mixed_solvent_representation(self, X_featurized: pd.DataFrame):
         alpha = X_featurized["SolventB%"]
 
@@ -123,65 +128,80 @@ class MLPModel(Model):
             ),
             axis="columns",
         )
-    
 
     def _prepare_training_tensors(self, X: pd.DataFrame, Y: pd.DataFrame = None):
-       # Creating featurization of the solvent
-       X_input = featurize_input_df(X, self.featurization, remove_constant=True)
-       
-       # Numerical
-       numerical_values = X_input[["Residence Time", "Temperature"]].values
-       numerical_tensor = torch.tensor(numerical_values, dtype=torch.float32).to(self.device)
-       if self.numerical_mean is None or self.numerical_std is None:
-           self.numerical_mean = numerical_tensor.mean(dim=0, keepdim=True)
-           self.numerical_std = numerical_tensor.std(dim=0, keepdim=True)
-       numerical_tensor =  (numerical_tensor - self.numerical_mean) / self.numerical_std
-       
-       if is_df_solvent_ramp_dataset(X):
-           self.is_mixture = True
-           #X_input = self._get_mixed_solvent_representation(X_input)           
-           pct_B = torch.tensor(X["SolventB%"].values, dtype=torch.float32).to(self.device).unsqueeze(1)         
-           
-           def get_solvent_feat_tensor(prefix):
-                cols = [c for c in X_input.columns if c.startswith(f"{prefix}_")]
-                tensor = torch.tensor(X_input[cols].values, dtype=torch.float32).to(self.device)
-                return tensor
-            
-           A_feat_tensor = get_solvent_feat_tensor("A")
-           B_feat_tensor = get_solvent_feat_tensor("B")
-           
-           input_tensor = torch.cat([numerical_tensor, pct_B, A_feat_tensor, B_feat_tensor], dim=1)
-           
-       else:
-           self.is_mixture = False
-           featurization_cols = [col for col in X_input.columns if col not in ["Residence Time", "Temperature"]]
-           featurization_tensor = torch.tensor(X_input[featurization_cols].values, dtype=torch.float32).to(self.device)
-           input_tensor = torch.cat([numerical_tensor, featurization_tensor], dim=1)
-       # if self.featurization == "acs_pca_descriptors":
-       #     non_numerical_tensor = (non_numerical_tensor - non_numerical_tensor.mean(dim=0, keepdim=True)) / non_numerical_tensor.std(dim=0, keepdim=True)
-       
-       if Y is not None:
-           targets = torch.tensor(Y.values, dtype=torch.float32).to(self.device)
-       else:
-           targets = None
+        # Creating featurization of the solvent
+        X_input = featurize_input_df(X, self.featurization, remove_constant=True)
 
-       return input_tensor, targets
+        # Numerical
+        numerical_values = X_input[["Residence Time", "Temperature"]].values
+        numerical_tensor = torch.tensor(numerical_values, dtype=torch.float32).to(
+            self.device
+        )
+        if self.numerical_mean is None or self.numerical_std is None:
+            self.numerical_mean = numerical_tensor.mean(dim=0, keepdim=True)
+            self.numerical_std = numerical_tensor.std(dim=0, keepdim=True)
+        numerical_tensor = (numerical_tensor - self.numerical_mean) / self.numerical_std
+
+        if is_df_solvent_ramp_dataset(X):
+            self.is_mixture = True
+            # X_input = self._get_mixed_solvent_representation(X_input)
+            pct_B = (
+                torch.tensor(X["SolventB%"].values, dtype=torch.float32)
+                .to(self.device)
+                .unsqueeze(1)
+            )
+
+            def get_solvent_feat_tensor(prefix):
+                cols = [c for c in X_input.columns if c.startswith(f"{prefix}_")]
+                tensor = torch.tensor(X_input[cols].values, dtype=torch.float32).to(
+                    self.device
+                )
+                return tensor
+
+            A_feat_tensor = get_solvent_feat_tensor("A")
+            B_feat_tensor = get_solvent_feat_tensor("B")
+
+            input_tensor = torch.cat(
+                [numerical_tensor, pct_B, A_feat_tensor, B_feat_tensor], dim=1
+            )
+
+        else:
+            self.is_mixture = False
+            featurization_cols = [
+                col
+                for col in X_input.columns
+                if col not in ["Residence Time", "Temperature"]
+            ]
+            featurization_tensor = torch.tensor(
+                X_input[featurization_cols].values, dtype=torch.float32
+            ).to(self.device)
+            input_tensor = torch.cat([numerical_tensor, featurization_tensor], dim=1)
+        # if self.featurization == "acs_pca_descriptors":
+        #     non_numerical_tensor = (non_numerical_tensor - non_numerical_tensor.mean(dim=0, keepdim=True)) / non_numerical_tensor.std(dim=0, keepdim=True)
+
+        if Y is not None:
+            targets = torch.tensor(Y.values, dtype=torch.float32).to(self.device)
+        else:
+            targets = None
+
+        return input_tensor, targets
 
     def _full_model_prediction(self, inputs: torch.Tensor) -> torch.Tensor:
         if not self.is_mixture:
             return self.MLP(inputs)
-    
+
         # Expecting inputs as: [Residence Time, Temperature, SolventB%, A_feat..., B_feat...]
         numerical = inputs[:, :2]
         pct_B = inputs[:, 2:3]
         num_feats = (inputs.shape[1] - 3) // 2
-        A_feat = inputs[:, 3: 3 + num_feats]
-        B_feat = inputs[:, 3 + num_feats:]
-    
+        A_feat = inputs[:, 3 : 3 + num_feats]
+        B_feat = inputs[:, 3 + num_feats :]
+
         alpha = torch.sigmoid(self.sigmoid_a * pct_B + self.sigmoid_b)
         mixed = (1 - alpha) * A_feat + alpha * B_feat
         full_input = torch.cat([numerical, mixed], dim=1)
-    
+
         return self.MLP(full_input)
 
     def _train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame) -> None:
@@ -213,7 +233,7 @@ class MLPModel(Model):
 
         # Set MLP and optimizer
         if self.is_mixture:
-            num_features = int((train_inputs.shape[1]-3)/2 + 2)
+            num_features = int((train_inputs.shape[1] - 3) / 2 + 2)
         else:
             num_features = train_inputs.shape[1]
         num_outputs = train_targets.shape[1]
