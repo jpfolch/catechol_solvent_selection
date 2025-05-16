@@ -68,3 +68,10 @@ class Model(ABC):
         This method should be implemented by subclasses.
         """
         pass
+
+    def select_next_bo(self, X: pd.DataFrame) -> int:
+        """
+        Select the next experiment to query based on the model's predictions.
+        This method should be implemented by subclasses.
+        """
+        pass

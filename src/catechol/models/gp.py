@@ -13,6 +13,7 @@ from catechol.models.learn_mean import LearnMean
 from gpytorch.kernels.scale_kernel import ScaleKernel
 from botorch.models.utils.gpytorch_modules import get_covar_module_with_dim_scaled_prior
 
+from scipy.stats import norm
 
 from catechol.models.multitask import KroneckerMultiTaskGP
 from catechol.data.data_labels import (
@@ -108,6 +109,7 @@ class GPModel(Model):
         learn_prior_mean: bool = False,
         use_separated_kernel: bool = False,
         al_strategy: str = "mutual_information",
+        bo_strategy: str = "ei",
     ):
         super().__init__(featurization=featurization)
         self.multitask = multitask
@@ -116,6 +118,7 @@ class GPModel(Model):
         self.active_learning_strategy = al_strategy
         self.learn_prior_mean = learn_prior_mean
         self.use_separated_kernel = use_separated_kernel
+        self.bo_strategy = bo_strategy
         self.target_labels = []
         if transfer_learning:
             # we use the SM column to identify the task
@@ -169,6 +172,8 @@ class GPModel(Model):
             train_X_featurized["SM SMILES"] = (
                 train_X_featurized["SM SMILES"].astype("category").cat.codes
             )
+        if self.bo_strategy == "ei":
+            self.best_observation = train_Y.max().max()
 
         train_X_tensor = torch.tensor(
             train_X_featurized.to_numpy(), dtype=torch.float64
@@ -212,7 +217,7 @@ class GPModel(Model):
 
         self.model = model
         mll = ExactMarginalLogLikelihood(self.model.likelihood, self.model)
-        fit_gpytorch_mll(mll, optimizer_kwargs=dict(timeout_sec=5))
+        fit_gpytorch_mll(mll, optimizer_kwargs=dict(timeout_sec=30))
 
         self.target_labels = train_Y.columns.to_list()
 
@@ -371,4 +376,59 @@ class GPModel(Model):
         # return the ramp with the highest mutual information
         max_mutual_info_index = np.argmax(mutual_infos)
         return ramps_to_test[max_mutual_info_index]
+
+    def select_next_bo(self, train_idx, X: pd.DataFrame):
+
+        if self.bo_strategy == "ei":
+            return self._select_next_bo_ei(train_idx, X)
+        elif self.bo_strategy == "random":
+            # set of points to choose from
+            test_idx = [
+                i for i in X.index if i not in train_idx
+            ]
+            rng = np.random.default_rng()
+            return rng.choice(test_idx)
+        elif self.bo_strategy == "ucb":
+            return self._select_next_bo_ucb(train_idx, X)
+
+    def _select_next_bo_ei(self, train_idx, X: pd.DataFrame):
+        test_idx = [
+            i for i in X.index if i not in train_idx
+        ]
+
+        test_X = X.iloc[test_idx]
+
+        preds = self.predict(test_X)
+        mean_lbl, var_lbl = get_data_labels_mean_var(self.target_labels)
+        mean = preds[mean_lbl].to_numpy()
+        var = preds[var_lbl].to_numpy()
+        
+        # calculate the expected improvement
+        z = (
+            (mean - self.best_observation) / np.sqrt(var)
+        )
+        ei = (self.best_observation - mean) * norm.cdf(z) + np.sqrt(var) * norm.pdf(z)
+
+        # return the index of the point with the highest expected improvement
+        max_ei_index = np.argmax(ei)
+        return test_idx[max_ei_index]
+    
+    def _select_next_bo_ucb(self, train_idx, X: pd.DataFrame):
+        test_idx = [
+            i for i in X.index if i not in train_idx
+        ]
+
+        test_X = X.iloc[test_idx]
+
+        preds = self.predict(test_X)
+        mean_lbl, var_lbl = get_data_labels_mean_var(self.target_labels)
+        mean = preds[mean_lbl].to_numpy()
+        var = preds[var_lbl].to_numpy()
+
+        # calculate the upper confidence bound
+        ucb = mean + 1.96 * np.sqrt(var)
+
+        # return the index of the point with the highest ucb
+        max_ucb_index = np.argmax(ucb)
+        return test_idx[max_ucb_index]
 
