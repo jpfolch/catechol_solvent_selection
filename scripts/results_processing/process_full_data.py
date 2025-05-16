@@ -33,6 +33,13 @@ EXTENSIONS_TABLE = [
     ("GPModel", "spange", "multi"),
     ("GPModel", "spange", "indep-warp"),
 ]
+TRANSFER_TABLE = [
+    ("BaselineGPModel", "", ""),
+    ("GPModel", "spange", "indep-separated"),
+    ("MLPModel", "spange", ""),
+    ("LLMModel", "smiles", "rxnfp"),
+    ("LLMModel", "smiles", "chemberta"),
+]
 
 
 def parse_model_filename(model_str: str) -> dict[str, str]:
@@ -111,8 +118,8 @@ def filter_and_sort_results(all_results: pd.DataFrame, normalize_nlpd: bool = Tr
     ).sort_index(key=sorter, level=[0, 2])
 
 
-def get_latex_table(all_results: pd.DataFrame):
-    all_results = all_results.fillna("-")
+def get_latex_table(all_results: pd.DataFrame, droplevel: int = 2):
+    all_results = all_results.fillna("-").droplevel(level=droplevel)
     # remove the labels for the header
     all_results.columns.names = [None, None]
     styler = all_results.style.format(precision=3)
@@ -141,7 +148,7 @@ if __name__ == "__main__":
         f.write(get_latex_table(all_results.loc[REGRESSION_TABLE]))
 
     with open(OUTPUT_DIR / "extensions.tex", "w") as f:
-        f.write(get_latex_table(all_results.loc[EXTENSIONS_TABLE]))
+        f.write(get_latex_table(all_results.loc[EXTENSIONS_TABLE], droplevel=1))
 
     # Table: transfer learning
     tl_results = load_results(TRANSFER_LEARNING_RESULTS_DIR)
@@ -157,4 +164,4 @@ if __name__ == "__main__":
     )
     tl_results = filter_and_sort_results(tl_results, normalize_nlpd=False)
     with open(OUTPUT_DIR / "transfer_learning.tex", "w") as f:
-        f.write(get_latex_table(tl_results))
+        f.write(get_latex_table(tl_results.loc[TRANSFER_TABLE]))

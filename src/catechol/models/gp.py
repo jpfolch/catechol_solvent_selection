@@ -196,21 +196,25 @@ class GPModel(Model):
         interpolate = is_df_solvent_ramp_dataset(train_X)
         input_transform = self._get_input_transform(train_X_featurized, interpolate)
 
+        # get shapes needed for defining the covariance function
+        _, aug_batch_shape = SingleTaskGP.get_batch_dimensions(train_X=train_X_tensor, train_Y=train_Y_tensor)
+        transformed_X = input_transform.transform(train_X_tensor) if input_transform else train_X_tensor
+        d = transformed_X.shape[-1]
+        covar_module = get_separated_kernel(aug_batch_shape, d, cont_dims=[0, 1])
+
         if self.transfer_learning:
             # we use an MTGP since only one experiment is observed for each X
             task_feature = train_X_featurized.columns.get_loc("SM SMILES")
+
             model = MultiTaskGP(
                 train_X_tensor,
                 train_Y_tensor,
                 task_feature=task_feature,
                 input_transform=input_transform,
+                covar_module=covar_module,
             )
         else:
             model_cls = KroneckerMultiTaskGP if self.multitask else SingleTaskGP
-            _, aug_batch_shape = SingleTaskGP.get_batch_dimensions(train_X=train_X_tensor, train_Y=train_Y_tensor)
-            transformed_X = input_transform.transform(train_X_tensor) if input_transform else train_X_tensor
-            d = transformed_X.shape[-1]
-            covar_module = get_separated_kernel(aug_batch_shape, d, cont_dims=[0, 1])
             model = model_cls(
                 train_X_tensor,
                 train_Y_tensor,
