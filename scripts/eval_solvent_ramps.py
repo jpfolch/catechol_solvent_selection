@@ -22,7 +22,7 @@ def main(model_name: str, featurization: FeaturizationType, kwargs, learn_prior_
     model = get_model(model_name=model_name, featurization=featurization, **kwargs)
     X, Y = load_solvent_ramp_data()
     # remove unnecessary columns
-    X = X[INPUT_LABELS_FULL_DATA]
+    X = X[INPUT_LABELS_FULL_DATA + model.extra_input_columns_full]
 
     results = pd.DataFrame(columns=["Test solvent", "mse", "nlpd"])
     out_dir = Path("results/full_data/")
