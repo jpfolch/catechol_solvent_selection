@@ -179,7 +179,7 @@ class NPModel(Model):
         self.sigma_bound = sigma_bound
 
         ## Training parameters
-        self.optimizer = optimizer
+        self.optimize_init = optimizer
         self.learning_rate = learning_rate
         self.max_context_proportion = max_context_proportion
         self.min_context_proportion = min_context_proportion
@@ -211,6 +211,7 @@ class NPModel(Model):
         self.model = np(x_dim=self.x_dim, y_dim=self.y_dim, r_dim=self.r_dim, z_dim=self.z_dim, 
                         h_dim=self.h_dim, sigma_bound=self.sigma_bound)
         self.model = self.model.double()
+        self.optimizer = self.optimize_init
         self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
         # Learning rate scheduler: ReduceLROnPlateau
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
