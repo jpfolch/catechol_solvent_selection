@@ -3,6 +3,7 @@ from .baseline import BaselineGPModel, BaselineModel
 from .gp import GPModel
 from .llm import LLMModel
 from .mlp import MLPModel
+from .np import NPModel
 from .ode import EODEModel, LODEModel, NODEModel
 
 ALL_MODELS = {
@@ -11,9 +12,10 @@ ALL_MODELS = {
     "MLPModel": MLPModel,
     "BaselineModel": BaselineModel,
     "BaselineGPModel": BaselineGPModel,
-    "LODEModel": LODEModel,
-    "EODEModel": EODEModel,
+    "LODEModel": LODEModel, 
+    "EODEModel": EODEModel, 
     "NODEModel": NODEModel,
+    "NPModel": NPModel,
 }
 
 
