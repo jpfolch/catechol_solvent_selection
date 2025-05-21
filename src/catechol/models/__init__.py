@@ -1,17 +1,17 @@
 from .base_model import Model
-from .baseline import BaselineModel
+from .baseline import BaselineGPModel, BaselineModel
 from .gp import GPModel
-
 from .llm import LLMModel
 from .mlp import MLPModel
-from .ode import LODEModel, EODEModel, NODEModel
 from .np import NPModel
+from .ode import EODEModel, LODEModel, NODEModel
 
 ALL_MODELS = {
     "GPModel": GPModel,
     "LLMModel": LLMModel,
     "MLPModel": MLPModel,
     "BaselineModel": BaselineModel,
+    "BaselineGPModel": BaselineGPModel,
     "LODEModel": LODEModel, 
     "EODEModel": EODEModel, 
     "NODEModel": NODEModel,

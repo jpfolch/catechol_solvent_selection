@@ -1,0 +1,14 @@
+Test solvent,mse,nlpd
+"Methanol-Ethylene Glycol [1,2-Ethanediol]",0.020931651790568214,0.15246727327785825
+"1,1,1,3,3,3-Hexafluoropropan-2-ol-2-Methyltetrahydrofuran [2-MeTHF]",0.019778213891608984,-1.1111043343360718
+Cyclohexane-IPA [Propan-2-ol],0.004962918546334564,0.7502007778073913
+Water.Acetonitrile-Acetonitrile,0.021593294602857638,15.00440075615609
+Acetonitrile-Acetonitrile.Acetic Acid,0.03094397968948182,4.807852773437225
+2-Methyltetrahydrofuran [2-MeTHF]-Diethyl Ether [Ether],0.006605397926720181,-2.4972377397038095
+"2,2,2-Trifluoroethanol-Water.2,2,2-Trifluoroethanol",0.01972727033721959,1.083489725344486
+"DMA [N,N-Dimethylacetamide]-Decanol",0.05020063106696714,1.402289515047296
+Ethanol-THF [Tetrahydrofuran],0.007112730730244714,0.21291399985174475
+Dihydrolevoglucosenone (Cyrene)-Ethyl Acetate,0.027778632784298412,-0.11330350850436156
+MTBE [tert-Butylmethylether]-Butanone [MEK],0.050773399549464165,1.27438648478312
+tert-Butanol [2-Methylpropan-2-ol]-Dimethyl Carbonate,0.05977788993005782,0.32372516651873195
+Methyl Propionate-Ethyl Lactate,0.07694707246901879,1.4082441375470796

@@ -17,7 +17,7 @@ from catechol.models import MLPModel
 # --- Parameter grids ---
 dropout_values = [0.0, 0.1, 0.3, 0.5]
 learning_rates = [1e-5, 1e-4, 1e-3]
-featurization_type_values = ["acs_pca_descriptors", "drfps", "fragprints"]
+featurization_type_values = ["acs_pca_descriptors", "drfps_catechol", "fragprints"]
 # --- Load dataset ---
 X, Y = load_single_solvent_data()
 X = X[["Residence Time", "Temperature", "SOLVENT NAME"]]

@@ -1,8 +1,6 @@
 import os
 
 import matplotlib.pyplot as plt
-import scienceplots
-
 from catechol.data.loader import load_solvent_ramp_data
 
 plt.style.use(["science", "no-latex", "grid"])
@@ -12,11 +10,11 @@ directory = "figures/solvent_ramps"
 if not os.path.exists(directory):
     os.makedirs(directory)
 
-if not os.path.exists(directory + '/225_degrees'):
-    os.makedirs(directory + '/225_degrees')
+if not os.path.exists(directory + "/225_degrees"):
+    os.makedirs(directory + "/225_degrees")
 
-if not os.path.exists(directory + '/175_degrees'):
-    os.makedirs(directory + '/175_degrees')
+if not os.path.exists(directory + "/175_degrees"):
+    os.makedirs(directory + "/175_degrees")
 
 # load the full data
 X, Y = load_solvent_ramp_data()
@@ -25,7 +23,6 @@ X, Y = load_solvent_ramp_data()
 exp_nums = X["EXP NUM"].unique()
 
 for exp in exp_nums:
-
     X_exp = X[X["EXP NUM"] == exp]
     Y_exp = Y[X["EXP NUM"] == exp]
 
@@ -41,12 +38,18 @@ for exp in exp_nums:
 
     # if there are more than 0 rows, plot the data
     if len(X_exp) > 0:
-        # plot solvent B percentage against SM and products
+        # plot solvent B percentage against SM and products
         fig, ax = plt.subplots(figsize=(8, 6))
         # plot the data
-        ax.scatter(X_exp["SolventB%"] * 100, Y_exp["SM"] * 100, label="Starting Material")
-        ax.scatter(X_exp["SolventB%"] * 100, Y_exp["Product 2"] * 100, label="Product 2")
-        ax.scatter(X_exp["SolventB%"] * 100, Y_exp["Product 3"] * 100, label="Product 3")
+        ax.scatter(
+            X_exp["SolventB%"] * 100, Y_exp["SM"] * 100, label="Starting Material"
+        )
+        ax.scatter(
+            X_exp["SolventB%"] * 100, Y_exp["Product 2"] * 100, label="Product 2"
+        )
+        ax.scatter(
+            X_exp["SolventB%"] * 100, Y_exp["Product 3"] * 100, label="Product 3"
+        )
 
         # set the title and labels
         solvent_a = X_exp["SOLVENT A NAME"].iloc[0]
@@ -64,8 +67,8 @@ for exp in exp_nums:
         ax.set_ylabel("Yield / %", fontsize=16)
 
         # set tick sizes
-        ax.tick_params(axis='both', which='major', labelsize=16)
-        ax.tick_params(axis='both', which='minor', labelsize=16)
+        ax.tick_params(axis="both", which="major", labelsize=16)
+        ax.tick_params(axis="both", which="minor", labelsize=16)
 
         # limits
         ax.set_xlim(0, 101)
@@ -75,7 +78,11 @@ for exp in exp_nums:
         ax.legend(fontsize=16)
 
         # save the figure
-        fig.savefig(f"{directory}/225_degrees/{solvent_a}_{solvent_b}_exp_{exp}.pdf", dpi=300, bbox_inches="tight")
+        fig.savefig(
+            f"{directory}/225_degrees/{solvent_a}_{solvent_b}_exp_{exp}.pdf",
+            dpi=300,
+            bbox_inches="tight",
+        )
 
         # show the plot
         plt.show()
@@ -83,7 +90,6 @@ for exp in exp_nums:
 # now plot for 175 degrees
 
 for exp in exp_nums:
-
     X_exp = X[X["EXP NUM"] == exp]
     Y_exp = Y[X["EXP NUM"] == exp]
 
@@ -99,12 +105,18 @@ for exp in exp_nums:
 
     # if there are more than 0 rows, plot the data
     if len(X_exp) > 0:
-        # plot solvent B percentage against SM and products
+        # plot solvent B percentage against SM and products
         fig, ax = plt.subplots(figsize=(8, 6))
         # plot the data
-        ax.scatter(X_exp["SolventB%"] * 100, Y_exp["SM"] * 100, label="Starting Material")
-        ax.scatter(X_exp["SolventB%"] * 100, Y_exp["Product 2"] * 100, label="Product 2")
-        ax.scatter(X_exp["SolventB%"] * 100, Y_exp["Product 3"] * 100, label="Product 3")
+        ax.scatter(
+            X_exp["SolventB%"] * 100, Y_exp["SM"] * 100, label="Starting Material"
+        )
+        ax.scatter(
+            X_exp["SolventB%"] * 100, Y_exp["Product 2"] * 100, label="Product 2"
+        )
+        ax.scatter(
+            X_exp["SolventB%"] * 100, Y_exp["Product 3"] * 100, label="Product 3"
+        )
 
         # set the title and labels
         solvent_a = X_exp["SOLVENT A NAME"].iloc[0]
@@ -122,8 +134,8 @@ for exp in exp_nums:
         ax.set_ylabel("Yield / %", fontsize=16)
 
         # set tick sizes
-        ax.tick_params(axis='both', which='major', labelsize=16)
-        ax.tick_params(axis='both', which='minor', labelsize=16)
+        ax.tick_params(axis="both", which="major", labelsize=16)
+        ax.tick_params(axis="both", which="minor", labelsize=16)
 
         # limits
         ax.set_xlim(0, 101)
@@ -133,7 +145,11 @@ for exp in exp_nums:
         ax.legend(fontsize=16)
 
         # save the figure
-        fig.savefig(f"{directory}/175_degrees/{solvent_a}_{solvent_b}_exp_{exp}.pdf", dpi=300, bbox_inches="tight")
+        fig.savefig(
+            f"{directory}/175_degrees/{solvent_a}_{solvent_b}_exp_{exp}.pdf",
+            dpi=300,
+            bbox_inches="tight",
+        )
 
         # show the plot
         plt.show()

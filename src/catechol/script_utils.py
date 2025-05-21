@@ -1,8 +1,9 @@
 import argparse
-from typing import TypeVar, Any
+from typing import TypeVar
 
 T = TypeVar("T")
 T_ = TypeVar("T")
+
 
 def map_str_to_bool(s: T_) -> T_ | bool:
     if not isinstance(s, str):
@@ -10,6 +11,7 @@ def map_str_to_bool(s: T_) -> T_ | bool:
     if s.lower() in ["true", "false"]:
         return s.lower() == "true"
     return s
+
 
 def map_str_to_type(s: T_, type: type[T]) -> T_ | T:
     if not isinstance(s, str):

@@ -1,7 +1,9 @@
 import pandas as pd
 
 
-def get_data_labels_mean_var(target_labels: list[str] | None = None) -> tuple[list[str], list[str]]:
+def get_data_labels_mean_var(
+    target_labels: list[str] | None = None,
+) -> tuple[list[str], list[str]]:
     """Get the labels of the mean and variance predictions."""
     if target_labels is None:
         target_labels = TARGET_LABELS
@@ -45,7 +47,7 @@ INPUT_LABELS_ACTIVE_LEARNING = [
     "SOLVENT A NAME",
     "SOLVENT B NAME",
     "SolventB%",
-    "RAMP NUM"
+    "RAMP NUM",
 ]
 
 TARGET_LABELS = [
@@ -54,6 +56,4 @@ TARGET_LABELS = [
     "SM",
 ]
 
-TARGET_CLAISEN_LABELS = [
-    "Product"
-]
+TARGET_CLAISEN_LABELS = ["Product"]

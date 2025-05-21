@@ -1,9 +1,8 @@
 import os
 
 import matplotlib.pyplot as plt
-
+from catechol.data.featurizations import featurize_input_df
 from catechol.data.loader import load_solvent_ramp_data
-from catechol.data.featurizations import FeaturizationType, featurize_input_df
 
 directory = "figures/acs_solvent_ramps_coloured"
 # create a directory to save the plots

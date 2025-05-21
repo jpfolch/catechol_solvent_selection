@@ -17,16 +17,24 @@ from catechol.script_utils import StoreDict
 
 
 def main(
-    model_name: str, featurization: FeaturizationType, kwargs, init_set_size: int, seed: int, strategy: str
+    model_name: str,
+    featurization: FeaturizationType,
+    kwargs,
+    init_set_size: int,
+    seed: int,
+    strategy: str,
 ):
-    model = get_model(model_name=model_name, featurization=featurization, al_strategy = strategy, **kwargs)
+    model = get_model(
+        model_name=model_name,
+        featurization=featurization,
+        al_strategy=strategy,
+        **kwargs,
+    )
     X, Y = load_solvent_ramp_data()
     # remove unnecessary columns
     X = X[INPUT_LABELS_ACTIVE_LEARNING + model.extra_input_columns]
 
-    results = pd.DataFrame(
-        columns=["Number of ramps", "mse", "nlpd", "Ramp chosen"]
-    )
+    results = pd.DataFrame(columns=["Number of ramps", "mse", "nlpd", "Ramp chosen"])
     model_name = model.get_model_name()
     out_dir = Path(f"results/active_learning/{model_name}/{strategy}/")
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -59,9 +67,7 @@ def main(
         (
             (train_X, train_Y),
             (test_X, test_Y),
-        ) = generate_active_learning_train_test_split(
-            X, Y, ramps_to_train
-        )
+        ) = generate_active_learning_train_test_split(X, Y, ramps_to_train)
         model.train(train_X, train_Y)
 
         test_X, test_Y = replace_repeated_measurements_with_average(test_X, test_Y)
@@ -122,4 +128,6 @@ if __name__ == "__main__":
     args = argparser.parse_args()
     # if no config is passed, create an empty dictionary
     config = args.config or {}
-    results = main(args.model, args.featurization, config, args.initset, args.seed, args.strategy)
+    results = main(
+        args.model, args.featurization, config, args.initset, args.seed, args.strategy
+    )

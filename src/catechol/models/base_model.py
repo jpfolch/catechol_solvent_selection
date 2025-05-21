@@ -11,6 +11,7 @@ class Model(ABC):
 
     normalize_inputs = True
     extra_input_columns = []
+    extra_input_columns_full = []
 
     def __init__(self, featurization: FeaturizationType | None = None):
         """Initialize the model."""
@@ -18,7 +19,9 @@ class Model(ABC):
         self.featurization = featurization
         self.target_labels = []
 
-    def train(self, train_X: pd.DataFrame, train_Y: pd.DataFrame, *args, **kwargs) -> None:
+    def train(
+        self, train_X: pd.DataFrame, train_Y: pd.DataFrame, *args, **kwargs
+    ) -> None:
         """Train the model on the given data."""
         if self.normalize_inputs:
             train_X = normalize(train_X)
@@ -64,6 +67,13 @@ class Model(ABC):
     ) -> str:
         """
         Select the next ramp to train on based on the model's predictions.
+        This method should be implemented by subclasses.
+        """
+        pass
+
+    def select_next_bo(self, X: pd.DataFrame) -> int:
+        """
+        Select the next experiment to query based on the model's predictions.
         This method should be implemented by subclasses.
         """
         pass

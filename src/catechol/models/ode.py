@@ -20,8 +20,8 @@ from catechol.data.loader import (
 from .base_model import Model
 
 featurization_dims = {
-    "acs_pca_descriptors": 5, 
-    "drfps": 2048, 
+    "acs_pca_descriptors": 5,
+    "drfps": 2048,
     "fragprints": 2133,
     "spange_descriptors": 13,
 }
@@ -810,10 +810,12 @@ class NODEModel(Model):
             full_outputs.append(pred_df)
 
         final = pd.concat(full_outputs, ignore_index=True)
-        mean_lbl, _ = get_data_labels_mean_var()
+        mean_lbl, var_lbl = get_data_labels_mean_var()
         final.columns = mean_lbl
         mean_df = final
-        return mean_df
+        var_df = pd.DataFrame(np.zeros_like(mean_df), columns=var_lbl)
+
+        return pd.concat([mean_df, var_df], axis=1)
 
     def _ask(self):
         # TODO: implement BO for GP

@@ -15,11 +15,12 @@ from catechol.data.loader import (
 from catechol.models import get_model
 from catechol.script_utils import StoreDict
 
+
 def main(model_name: str, featurization: FeaturizationType, kwargs):
     model = get_model(model_name=model_name, featurization=featurization, **kwargs)
     X, Y = load_solvent_ramp_data()
     # remove unnecessary columns
-    X = X[INPUT_LABELS_FULL_DATA]
+    X = X[INPUT_LABELS_FULL_DATA + model.extra_input_columns_full]
 
     results = pd.DataFrame(columns=["Test solvent", "mse", "nlpd"])
     out_dir = Path("results/full_data/")

@@ -27,8 +27,8 @@ def main(model_name: str, featurization: FeaturizationType, transfer: bool, kwar
     X, Y = load_solvent_ramp_data()
     X_c, Y_c = load_claisen_data()
     # remove unnecessary columns
-    X = X[INPUT_LABELS_FULL_DATA + model.extra_input_columns]
-    X_c = X_c[INPUT_LABELS_FULL_DATA + model.extra_input_columns]
+    X = X[INPUT_LABELS_FULL_DATA + model.extra_input_columns_full]
+    X_c = X_c[INPUT_LABELS_FULL_DATA + model.extra_input_columns_full]
 
     # transform to simpler problem
     Y = Y[["Product 2", "Product 3"]].sum(axis="columns").to_frame(name="Product")
@@ -40,7 +40,10 @@ def main(model_name: str, featurization: FeaturizationType, transfer: bool, kwar
     model_name = model.get_model_name()
     if transfer and model_name == "BaselineModel":
         model_name = f"{model_name}-transfer"
-
+    elif transfer:
+        model_name_parts = model_name.split("-")
+        model_name_parts.insert(-1, "transfer")
+        model_name = "-".join(model_name_parts)
 
     # this will generate all of the possible leave-one-out splits of the dataset
     split_generator = generate_leave_one_ramp_out_splits(X, Y)
