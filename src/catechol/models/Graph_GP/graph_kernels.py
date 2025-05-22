@@ -11,10 +11,10 @@ from grakel import Graph as GKgraph
 class SPKernel(IsotropicStationary):
     def __init__(self,
                  exp_option: bool = True,
-                 variance: float = 1,
+                 variance: float = 0.9,
                  alpha: float = 1,
                  beta: float = 1,
-                 lengthscales: float = 1,
+                 lengthscales: float = 0.5,
                  kernel_type: str = "SP",
                  trainable_variance: bool = True,
                  trainable_alpha: bool = True,
@@ -37,18 +37,18 @@ class SPKernel(IsotropicStationary):
         super().__init__(**kwargs)
         self.variance = Parameter(variance, transform=tfp.bijectors.SoftClip(
                     to_default_float(0.01),
-                    to_default_float(100),
+                    to_default_float(1),
                 )) if trainable_variance else variance
         self.lengthscales = Parameter(lengthscales, transform=tfp.bijectors.SoftClip(
             to_default_float(0.01),
-            to_default_float(100),
+            to_default_float(1),
         )) if trainable_lengthscales else lengthscales
         self.lengthscales.prior = tfp.distributions.LogNormal(
             tf.math.log(self.lengthscales), KERNEL_PRIOR_SCALE
         )
         self.lengthscales2 = Parameter(lengthscales, transform=tfp.bijectors.SoftClip(
             to_default_float(0.01),
-            to_default_float(100),
+            to_default_float(1),
         )) if trainable_lengthscales else lengthscales
         self.lengthscales2.prior = tfp.distributions.LogNormal(
             tf.math.log(self.lengthscales2), KERNEL_PRIOR_SCALE
