@@ -1,5 +1,6 @@
 import argparse
 from typing import TypeVar
+import numpy as np
 
 T = TypeVar("T")
 T_ = TypeVar("T")
@@ -43,3 +44,86 @@ class StoreDict(argparse.Action):
                 raise argparse.ArgumentError(self, message)
             kwargs_dict[key] = val
         setattr(namespace, self.dest, kwargs_dict)
+
+
+def calculate_euclidean_generational_distance(
+        estimated_pareto_set,
+        true_pareto_set):
+    """Calculate the Euclidean generational distance between estimated and true Pareto sets."""
+
+    estimated_pareto_set = np.array(estimated_pareto_set)
+    true_pareto_set = np.array(true_pareto_set)
+
+    if estimated_pareto_set.shape[1] != true_pareto_set.shape[1]:
+        raise ValueError("Pareto sets must have the same number of objectives.")
+    
+    # Calculate the Euclidean distance from each point in the estimated Pareto set to the nearest point in the true Pareto set
+    distances = np.linalg.norm(
+        estimated_pareto_set[:, np.newaxis] - true_pareto_set[np.newaxis, :],
+        axis=2
+    )
+    min_distances = np.min(distances, axis=1)
+
+    # calculate the generational distance
+    generational_distance = np.mean(min_distances)
+
+    return generational_distance
+
+def calculate_inverted_generational_distance(
+        estimated_pareto_set,
+        true_pareto_set):
+    """Calculate the inverted generational distance between estimated and true Pareto sets."""
+    estimated_pareto_set = np.array(estimated_pareto_set)
+    true_pareto_set = np.array(true_pareto_set)
+
+    if estimated_pareto_set.shape[1] != true_pareto_set.shape[1]:
+        raise ValueError("Pareto sets must have the same number of objectives.")
+    
+    # Calculate the Euclidean distance from each point in the true Pareto set to the nearest point in the estimated Pareto set
+    distances = np.linalg.norm(
+        true_pareto_set[:, np.newaxis] - estimated_pareto_set[np.newaxis, :],
+        axis=2
+    )
+    min_distances = np.min(distances, axis=1)
+
+    # calculate the inverted generational distance
+    inverted_generational_distance = np.mean(min_distances)
+
+    return inverted_generational_distance
+
+def calculate_maximum_pareto_frontier_error(
+        estimated_pareto_set,
+        true_pareto_set):
+    
+    """Calculate the maximum Pareto frontier error between estimated and true Pareto sets."""
+    estimated_pareto_set = np.array(estimated_pareto_set)
+    true_pareto_set = np.array(true_pareto_set)
+
+    if estimated_pareto_set.shape[1] != true_pareto_set.shape[1]:
+        raise ValueError("Pareto sets must have the same number of objectives.")
+    
+    # Calculate the maximum distance from each point in the estimated Pareto set to the true Pareto set
+    distances = np.linalg.norm(
+        estimated_pareto_set[:, np.newaxis] - true_pareto_set[np.newaxis, :],
+        axis=2
+    )
+    max_distance = np.max(np.min(distances, axis=1))
+
+    return max_distance
+
+def calculate_pareto_set(objective_values):
+
+    def is_pareto(point, points):
+        """Check if a point is Pareto optimal (maximization)."""
+        for p in points:
+            if all(p_i >= q_i for p_i, q_i in zip(p, point)) and any(p_i > q_i for p_i, q_i in zip(p, point)):
+                return False
+        
+        return True
+    
+    pareto_set = []
+    for point in objective_values:
+        if is_pareto(point, objective_values):
+            pareto_set.append(point)
+    
+    return pareto_set

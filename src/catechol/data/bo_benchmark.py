@@ -4,8 +4,10 @@ from catechol.data.data_labels import INPUT_LABELS_FULL_DATA
 from catechol.data.loader import (
     load_solvent_ramp_data,
     replace_repeated_measurements_with_average,
+    load_green_scores,
 )
 
+import matplotlib.pyplot as plt
 
 class BOBenchmark:
     """
@@ -78,3 +80,92 @@ class BOBenchmark:
                 [self._objective_function(i) for i in range(len(self.X))]
             )
             return self.X.iloc[best_idx], self._objective_function(best_idx)
+
+
+class MOBOBenchmark:
+    """
+    Class to load the data and query the BO benchmark.
+    """
+
+    def __init__(self, featurization, lambdas=[5, 1, 3, 1 / 20], **kwargs):
+        super().__init__(**kwargs)
+        X, Y = load_solvent_ramp_data()
+
+        X = X[INPUT_LABELS_FULL_DATA]
+        X = load_green_scores(X)
+        
+        Y["Green Score"] = X["Green Score"]
+        X = X.drop(columns=["Green Score"])
+
+        # replace repeated measurements with their average
+        X, Y = replace_repeated_measurements_with_average(X, Y)
+
+        self.featurization = featurization
+
+        # define the search space
+        self.X = X
+        # define the objective function
+        self.Y = Y
+
+        self.objective_precomputed = False
+        self.pareto_precomputed = False
+
+    def objective_function(self, idx):
+        if self.objective_precomputed:
+            return self.objective_values[idx]
+        else:
+            self.objective_values = np.zeros((len(self.X), 3))
+            for i in range(len(self.X)):
+                self.objective_values[i, :] = self._objective_function(i)
+            self.objective_precomputed = True
+            return self.objective_values[idx]
+
+    def _objective_function(self, idx):
+        # obtain the output data
+        X = self.X.iloc[idx]
+        Y = self.Y.iloc[idx]
+
+        total_yield = Y["Product 2"] + Y["Product 3"]
+
+        if total_yield == 0:
+            selectivity = 0
+        else:
+            selectivity = Y["Product 2"] / total_yield
+
+        green_score = Y["Green Score"]
+
+        return total_yield, selectivity, green_score
+
+    def get_search_space(self):
+        return self.X
+
+    def get_optimum(self):
+        if self.pareto_precomputed:
+            return self.pareto_set, self.pareto_values, self.pareto_idx
+        else:
+            self.pareto_set = []
+            self.pareto_values = []
+            self.pareto_idx = []
+            for i in range(len(self.X)):
+                point = self._objective_function(i)
+                if self.is_pareto(point, self.objective_values):
+                    self.pareto_set.append(self.X.iloc[i])
+                    self.pareto_values.append(point)
+                    self.pareto_idx.append(i)
+            
+            self.pareto_precomputed = True
+
+            return self.pareto_set, np.array(self.pareto_values), self.pareto_idx
+    
+    # def is_pareto(self, point, points):
+    #     """Check if a point is a Pareto point."""
+    #     return all(
+    #         not (p[0] >= point[0] and p[1] >= point[1] and p[2] >= point[2]) for p in points if p != point
+    #     )
+    
+    def is_pareto(self, point, points):
+        """Check if a point is Pareto optimal (maximization)."""
+        for p in points:
+            if all(p_i >= q_i for p_i, q_i in zip(p, point)) and any(p_i > q_i for p_i, q_i in zip(p, point)):
+                return False  # p dominates point
+        return True

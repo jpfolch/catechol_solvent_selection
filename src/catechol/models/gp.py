@@ -20,6 +20,7 @@ from catechol.data.data_labels import (
 from catechol.data.featurizations import FeaturizationType, featurize_input_df
 from catechol.models.learn_mean import LearnMean
 from catechol.models.multitask import KroneckerMultiTaskGP
+from catechol.data.loader import load_green_scores
 
 from .base_model import Model
 
@@ -442,3 +443,44 @@ class GPModel(Model):
         # return the index of the point with the highest ucb
         max_ucb_index = np.argmax(ucb)
         return test_idx[max_ucb_index]
+
+    def select_next_mobo(self, train_idx, X: pd.DataFrame, green_scores: pd.Series):
+        if self.bo_strategy == "random_scalars":
+            return self._select_next_bo_random_scalars(train_idx, X, green_scores)
+        elif self.bo_strategy == "random":
+            # set of points to choose from
+            test_idx = [i for i in X.index if i not in train_idx]
+            rng = np.random.default_rng()
+            return rng.choice(test_idx)
+
+    def _select_next_bo_random_scalars(self, train_idx, X: pd.DataFrame, green_scores: pd.Series):
+
+        test_idx = [i for i in X.index if i not in train_idx]
+
+        test_X = X.iloc[test_idx]
+        test_green_scores = green_scores.iloc[test_idx]
+
+        # obtain the predictions
+        preds = self.predict(test_X)
+        mean_lbl, var_lbl = get_data_labels_mean_var(self.target_labels)
+        mean = preds[mean_lbl].to_numpy()
+        var = preds[var_lbl].to_numpy()
+
+        # sample the scalarized values
+        scalarized_values = np.random.uniform(size=2)
+        # get the objective weights form the diffence in values
+        w1 = scalarized_values.min()
+        w2 = scalarized_values.max() - scalarized_values.min()
+        w3 = 1 - w1 - w2
+
+        # create normal distributions for each of the objectives
+        d1 = norm(loc=mean[:, 0], scale=np.sqrt(var[:, 0]))
+        d2 = norm(loc=mean[:, 1], scale=np.sqrt(var[:, 1]))
+        # create samples from the distributions
+        samples1 = d1.rvs()
+        samples2 = d2.rvs()
+        
+        # calculate the scalarized objective values
+        scalarized_objectives = w1 * samples1 + w2 * samples2 + w3 * test_green_scores.to_numpy()
+        
+        return test_idx[np.argmax(scalarized_objectives)]

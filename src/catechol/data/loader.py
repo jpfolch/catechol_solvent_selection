@@ -146,3 +146,32 @@ def generate_active_learning_train_test_split(
         (X[train_idcs_mask], Y[train_idcs_mask]),
         (X, Y),
     )
+
+def load_green_scores(
+    X_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """Add the green scores to a dataset."""
+    for solvent_name_column in ["SOLVENT NAME", "SOLVENT A NAME"]:
+        if solvent_name_column not in X_df.columns:
+            continue
+
+        green_lookup = pd.read_csv('data/featurization_look_ups/green_lookup.csv', index_col = 0)
+
+        # replace the "Water.2,2,2-Trifluoroethanol" lookup with 0.4
+        green_lookup.loc["Water.2,2,2-Trifluoroethanol"]["Green Score"] = 0.4
+        green_lookup = green_lookup.fillna(0.0)
+
+        # replace all the nans with zero
+
+        
+        if solvent_name_column in ["SOLVENT A NAME", "SOLVENT B NAME"]:
+            # if this is the full dataset, extract either "A" or "B" from column name
+            solvent_A_score = green_lookup.loc[X_df["SOLVENT A NAME"]]
+            solvent_B_score = green_lookup.loc[X_df["SOLVENT B NAME"]]
+
+            # obtain the green scores
+            X_df["Green Score"] = solvent_A_score.values.reshape(-1) * (1 - X_df["SolventB%"]) + solvent_B_score.values.reshape(-1) * X_df["SolventB%"]
+        else:
+            X_df["Green Score"] = green_lookup.loc[X_df["SOLVENT NAME"]]
+
+    return X_df
