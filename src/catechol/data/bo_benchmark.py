@@ -6,6 +6,7 @@ from catechol.data.loader import (
     replace_repeated_measurements_with_average,
     load_green_scores,
 )
+from catechol.script_utils import is_pareto
 
 import matplotlib.pyplot as plt
 
@@ -14,7 +15,14 @@ class BOBenchmark:
     Class to load the data and query the BO benchmark.
     """
 
-    def __init__(self, featurization, lambdas=[5, 1, 3, 1 / 20], **kwargs):
+    def __init__(self, featurization, lambdas=None, **kwargs):
+
+        if lambdas is None:
+            lambdas = [5, 1, 3, 1 / 20]
+        else:
+            if len(lambdas) != 4:
+                raise ValueError("lambdas must be a list of 4 values.")
+
         super().__init__(**kwargs)
         X, Y = load_solvent_ramp_data()
 
@@ -87,7 +95,7 @@ class MOBOBenchmark:
     Class to load the data and query the BO benchmark.
     """
 
-    def __init__(self, featurization, lambdas=[5, 1, 3, 1 / 20], **kwargs):
+    def __init__(self, featurization, **kwargs):
         super().__init__(**kwargs)
         X, Y = load_solvent_ramp_data()
 
@@ -122,7 +130,6 @@ class MOBOBenchmark:
 
     def _objective_function(self, idx):
         # obtain the output data
-        X = self.X.iloc[idx]
         Y = self.Y.iloc[idx]
 
         total_yield = Y["Product 2"] + Y["Product 3"]
@@ -148,7 +155,7 @@ class MOBOBenchmark:
             self.pareto_idx = []
             for i in range(len(self.X)):
                 point = self._objective_function(i)
-                if self.is_pareto(point, self.objective_values):
+                if is_pareto(point, self.objective_values):
                     self.pareto_set.append(self.X.iloc[i])
                     self.pareto_values.append(point)
                     self.pareto_idx.append(i)
@@ -156,16 +163,3 @@ class MOBOBenchmark:
             self.pareto_precomputed = True
 
             return self.pareto_set, np.array(self.pareto_values), self.pareto_idx
-    
-    # def is_pareto(self, point, points):
-    #     """Check if a point is a Pareto point."""
-    #     return all(
-    #         not (p[0] >= point[0] and p[1] >= point[1] and p[2] >= point[2]) for p in points if p != point
-    #     )
-    
-    def is_pareto(self, point, points):
-        """Check if a point is Pareto optimal (maximization)."""
-        for p in points:
-            if all(p_i >= q_i for p_i, q_i in zip(p, point)) and any(p_i > q_i for p_i, q_i in zip(p, point)):
-                return False  # p dominates point
-        return True

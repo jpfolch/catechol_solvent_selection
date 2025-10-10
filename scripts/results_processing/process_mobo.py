@@ -45,29 +45,14 @@ for feature in features:
         igds = np.array(igd)
         mpfes = np.array(mpfe)
 
-        # get the average after 1, 25, 50, 75, 100 iterations
-        gds_0 = np.average(gds[:, 0], axis=0)
-        gds_25 = np.average(gds[:, 24], axis=0)
-        gds_50 = np.average(gds[:, 49], axis=0)
-        gds_75 = np.average(gds[:, 74], axis=0)
-        gds_100 = np.average(gds[:, 98], axis=0)
+        gds_mean = np.mean(gds, axis=0)
+        gds_final[strategy].append(gds_mean[[0, 24, 49, 74, 98]].tolist())
 
-        igds_0 = np.average(igds[:, 0], axis=0)
-        igds_25 = np.average(igds[:, 24], axis=0)
-        igds_50 = np.average(igds[:, 49], axis=0)
-        igds_75 = np.average(igds[:, 74], axis=0)
-        igds_100 = np.average(igds[:, 98], axis=0)
+        igds_mean = np.mean(igds, axis=0)
+        igds_final[strategy].append(igds_mean[[0, 24, 49, 74, 98]].tolist())
 
-        mpfes_0 = np.average(mpfes[:, 0], axis=0)
-        mpfes_25 = np.average(mpfes[:, 24], axis=0)
-        mpfes_50 = np.average(mpfes[:, 49], axis=0)
-        mpfes_75 = np.average(mpfes[:, 74], axis=0)
-        mpfes_100 = np.average(mpfes[:, 98], axis=0)
-
-
-        gds_final[strategy].append([gds_0, gds_25, gds_50, gds_75, gds_100])
-        igds_final[strategy].append([igds_0, igds_25, igds_50, igds_75, igds_100])
-        mpfes_final[strategy].append([mpfes_0, mpfes_25, mpfes_50, mpfes_75, mpfes_100])
+        mpfes_mean = np.mean(mpfes, axis=0)
+        mpfes_final[strategy].append(mpfes_mean[[0, 24, 49, 74, 98]].tolist())
 
 # build a table
 gds_table = pd.DataFrame()
