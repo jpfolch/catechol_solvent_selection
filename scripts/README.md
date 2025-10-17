@@ -18,7 +18,7 @@ The `--model` provided must be one of the models in `catechol.models.ALL_MODELS`
 you want to add a custom model, ensure it is added to this dictionary. The currently 
 available models are:
 ```python
-"GPModel", "LLMModel", "MLPModel", "BaselineModel", "BaselineGPModel", "LODEModel", "EODEModel", "NODEModel", "NPModel"
+("GPModel", "LLMModel", "MLPModel", "BaselineModel", "BaselineGPModel", "LODEModel", "EODEModel", "NODEModel", "NPModel")
 ```
 
 The `--featurization` must be one of the featurizations corresponding to a lookup table
@@ -26,7 +26,7 @@ in `/data/featurization_look_ups/`. To provide your own featurizations, create a
 table like the ones in that directory, with the filename `<featurization_name>_lookup.csv`.
 The currently available featurizations are:
 ```python
-"acs_pca_descriptors", "drfps_catechol", "fragprints", "spange_descriptors"
+("acs_pca_descriptors", "drfps_catechol", "fragprints", "spange_descriptors")
 ```
 
 The `--config` corresponds to additional keyword arguments to be passed into the `Model`.
@@ -67,7 +67,7 @@ script has the same shared arguments as other scripts, it currently only support
 active learning strategy is used when acquiring new points. The options for the strategy
 are:
 ```python
-"random", "entropy", "mutual_information"
+("random", "entropy", "mutual_information")
 ```
 
 ### Bayesian optimization (sec 3.5)
@@ -77,5 +77,6 @@ To evaluate the bayesian optimization problems, run `eval_bayes_opt.py` and
 As with active learning, this currently only supports the GP model. These scripts also
 have a `--strategy` argument, which must be one of:
 ```python
-"random", "ei", "ucb"
+("random", "ei", "ucb") # for single objective
+("random", "random_scalars") # for multi-objective
 ```
