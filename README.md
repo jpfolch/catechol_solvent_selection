@@ -76,4 +76,18 @@ All of the scripts used to carry out the experiments are in `scripts/`, includin
 - `eval_bayes_opt.py`
 
 Each of these files takes, as argument, a model and a featurization, as well
-as an additional configuration string. See the individual scripts for usage examples.
+as an additional configuration string. See the [script README](./scripts/README.md), as
+well as the individual scripts, for further details.
+
+## Referencing
+
+If you use this datatset, please cite us as below:
+
+```bibtex
+@InProceedings{boyne2025catechol,
+  title     = {The Catechol Benchmark: Time-series Solvent Selection Data for Few-shot Machine Learning},
+  booktitle = {Advances in Neural Information Processing Systems},
+  author    = {Boyne, Toby and Campos, Juan S. and Langdon, Becky D. and Qing, Jixiang and Xie, Yilin and Zhang, Shiqiang and Tsay, Calvin and Misener, Ruth and Davies, Daniel W. and Jelfs, Kim E. and Boyall, Sarah and Dixon, Thomas M. and Schrecker, Linden and Folch, Jose Pablo},
+  year      = {2025},
+}
+```
